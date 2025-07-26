@@ -1,32 +1,51 @@
 // src/components/layout/Header.tsx
 import React from 'react';
-import { Monitor, Settings } from 'lucide-react';
+import { Monitor } from 'lucide-react';
+import PriceDisplay from '@/components/price/PriceDisplay';
 
 const Header: React.FC = () => {
   return (
-    <header className="bg-gray-900 text-white shadow-lg">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
+    <header className="bg-slate-800 shadow-lg">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* ロゴエリア */}
           <div className="flex items-center space-x-3">
-            <Monitor className="w-8 h-8 text-blue-400" />
+            <Monitor className="h-8 w-8 text-blue-400" />
             <div>
-              <h1 className="text-2xl font-bold">MyBuild PC</h1>
-              <p className="text-sm text-gray-300">自作PC構成見積もりツール</p>
+              <h1 className="text-xl font-bold text-white">
+                MyBuild PC
+              </h1>
+              <p className="text-sm text-slate-300">
+                自作PC構成見積もりツール
+              </p>
             </div>
           </div>
-          
-          <nav className="hidden md:flex items-center space-x-6">
-            <button className="hover:text-blue-400 transition-colors">
+
+          {/* ナビゲーションボタン */}
+          <div className="flex items-center space-x-4">
+            {/* 構成一覧ボタン */}
+            <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors duration-200 shadow-sm">
               構成一覧
             </button>
-            <button className="hover:text-blue-400 transition-colors">
+
+            {/* その他のボタン（必要に応じて） */}
+            <button className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-md transition-colors duration-200 border border-slate-600">
               保存済み
             </button>
-            <button className="flex items-center space-x-1 hover:text-blue-400 transition-colors">
-              <Settings className="w-4 h-4" />
-              <span>設定</span>
+
+            <button className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md transition-colors duration-200 shadow-sm">
+              新規作成
             </button>
-          </nav>
+          </div>
+
+          {/* コンパクト価格表示（オプション） */}
+          <div className="hidden lg:block">
+            <PriceDisplay 
+              compact={true}
+              showBudgetComparison={true}
+              className="max-w-xs"
+            />
+          </div>
         </div>
       </div>
     </header>
