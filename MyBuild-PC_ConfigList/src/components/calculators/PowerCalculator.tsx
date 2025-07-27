@@ -1,349 +1,424 @@
-// src/components/calculators/PowerCalculator.tsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState } from 'react';
 import { 
-  PowerCalculationResult, 
-  PowerCalculationConfig, 
-  PowerConnectorCheck,
-  LOAD_SCENARIOS 
-} from '../../types/power';
-import { Part, PartCategory } from '../../types/parts';
-import { PowerCalculatorService } from '../../services/powerCalculator';
+  usePowerCalculation, 
+  usePowerEfficiencyRating, 
+  usePSURecommendation,
+  usePowerWarningsByPriority 
+} from '../../hooks/usePowerCalculation';
+import { PCConfiguration, PowerWarning } from '../../types';
 
 interface PowerCalculatorProps {
-  parts: Partial<Record<PartCategory, Part | Part[]>>;
-  onConfigChange?: (config: PowerCalculationConfig) => void;
+  configuration: PCConfiguration;
   className?: string;
 }
 
-export const PowerCalculator: React.FC<PowerCalculatorProps> = ({
-  parts,
-  onConfigChange,
-  className = ''
+export const PowerCalculator: React.FC<PowerCalculatorProps> = ({ 
+  configuration, 
+  className = '' 
 }) => {
-  const [result, setResult] = useState<PowerCalculationResult | null>(null);
-  const [connectorCheck, setConnectorCheck] = useState<PowerConnectorCheck | null>(null);
-  const [config, setConfig] = useState<PowerCalculationConfig>({
-    scenario: 'gaming',
-    safetyMargin: 0.2,
-    futureUpgradeMargin: 0.1,
-    includePeripherals: true,
-    peripheralsPower: 50
-  });
-  const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [usageHours, setUsageHours] = useState(8);
+  const [electricityRate, setElectricityRate] = useState(27);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const powerService = useMemo(() => new PowerCalculatorService(), []);
+  const {
+    powerResult,
+    isCalculating,
+    error,
+    recommendedPSUs,
+    monthlyCost,
+    recalculate,
+    clearError,
+    updateUsageSettings
+  } = usePowerCalculation(configuration);
 
-  // パーツが変更されたら再計算
-  useEffect(() => {
-    calculatePower();
-  }, [parts, config]);
+  const efficiencyRating = usePowerEfficiencyRating(powerResult);
+  const psuRecommendations = usePSURecommendation(powerResult);
+  const warningsByPriority = usePowerWarningsByPriority(powerResult);
 
-  const calculatePower = async () => {
-    setLoading(true);
-    try {
-      const [powerResult, connectorResult] = await Promise.all([
-        powerService.calculatePower(parts, config),
-        powerService.checkPowerConnectors(parts)
-      ]);
-      
-      setResult(powerResult);
-      setConnectorCheck(connectorResult);
-    } catch (error) {
-      console.error('電源計算エラー:', error);
-    } finally {
-      setLoading(false);
-    }
+  // 使用設定の更新
+  const handleUsageUpdate = (hours: number, rate: number) => {
+    setUsageHours(hours);
+    setElectricityRate(rate);
+    updateUsageSettings(hours, rate);
   };
 
-  const handleConfigChange = (newConfig: Partial<PowerCalculationConfig>) => {
-    const updatedConfig = { ...config, ...newConfig };
-    setConfig(updatedConfig);
-    onConfigChange?.(updatedConfig);
-  };
-
-  const getSeverityColor = (severity: 'critical' | 'warning' | 'info') => {
-    switch (severity) {
-      case 'critical': return 'text-red-600 bg-red-50 border-red-200';
-      case 'warning': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'info': return 'text-blue-600 bg-blue-50 border-blue-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
-    }
-  };
-
-  const getLoadColor = (percentage: number) => {
-    if (percentage > 90) return 'text-red-600';
-    if (percentage > 75) return 'text-yellow-600';
-    return 'text-green-600';
-  };
-
-  if (loading) {
+  if (isCalculating) {
     return (
-      <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
-        <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="space-y-3">
-            <div className="h-4 bg-gray-200 rounded w-full"></div>
-            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+      <div className={`bg-white rounded-lg shadow-sm border p-6 ${className}`}>
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">電力を計算中...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={`bg-white rounded-lg shadow-sm border p-6 ${className}`}>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <h3 className="text-sm font-medium text-red-800">計算エラー</h3>
+          </div>
+          <p className="mt-2 text-sm text-red-700">{error}</p>
+          <div className="mt-4">
+            <button
+              onClick={() => { clearError(); recalculate(); }}
+              className="bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded text-sm"
+            >
+              再計算
+            </button>
           </div>
         </div>
       </div>
     );
   }
 
-  if (!result) {
+  if (!powerResult) {
     return (
-      <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">電源計算</h3>
-        <p className="text-gray-600">パーツを選択すると電源計算が表示されます</p>
+      <div className={`bg-white rounded-lg shadow-sm border p-6 ${className}`}>
+        <div className="text-center py-8 text-gray-500">
+          パーツを選択して電力計算を開始してください
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">電源計算</h3>
+    <div className={`bg-white rounded-lg shadow-sm border ${className}`}>
+      {/* ヘッダー */}
+      <div className="px-6 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">電力計算結果</h2>
+          <button
+            onClick={recalculate}
+            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+          >
+            再計算
+          </button>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-6">
+        {/* メイン結果表示 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <PowerMetricCard
+            title="アイドル時"
+            value={powerResult.totalIdlePower}
+            unit="W"
+            color="text-green-600"
+            bgColor="bg-green-50"
+          />
+          <PowerMetricCard
+            title="通常使用時"
+            value={powerResult.totalBasePower}
+            unit="W"
+            color="text-blue-600"
+            bgColor="bg-blue-50"
+          />
+          <PowerMetricCard
+            title="最大消費電力"
+            value={powerResult.totalMaxPower}
+            unit="W"
+            color="text-red-600"
+            bgColor="bg-red-50"
+          />
+        </div>
+
+        {/* 推奨電源容量 */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-gray-900 mb-2">推奨電源容量</h3>
+          <div className="flex items-center space-x-4">
+            <span className="text-2xl font-bold text-gray-900">
+              {powerResult.recommendedPSU}W
+            </span>
+            <span className="text-sm text-gray-600">
+              (安全マージン {powerResult.safetyMargin}% 含む)
+            </span>
+          </div>
+        </div>
+
+        {/* 効率評価 */}
+        {efficiencyRating && (
+          <div className="bg-white border rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-900 mb-2">電力効率</h3>
+            <div className="flex items-center space-x-3">
+              <div className="flex-1 bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${efficiencyRating.percentage}%` }}
+                />
+              </div>
+              <span className={`text-sm font-medium ${efficiencyRating.color}`}>
+                {efficiencyRating.percentage}%
+              </span>
+            </div>
+            <p className="text-sm text-gray-600 mt-1">{efficiencyRating.description}</p>
+          </div>
+        )}
+
+        {/* 警告表示 */}
+        <PowerWarningsSection warnings={warningsByPriority} />
+
+        {/* 詳細表示トグル */}
         <button
-          onClick={() => setExpanded(!expanded)}
-          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="w-full text-left text-sm text-blue-600 hover:text-blue-700 font-medium"
         >
-          {expanded ? '詳細を隠す' : '詳細を表示'}
+          {showAdvanced ? '詳細を非表示' : '詳細を表示'}
+          <svg 
+            className={`inline-block ml-1 w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
         </button>
+
+        {/* 詳細セクション */}
+        {showAdvanced && (
+          <div className="space-y-6 border-t pt-6">
+            {/* パーツ別内訳 */}
+            <PowerBreakdownSection breakdown={powerResult.breakdown} />
+
+            {/* 月間電気代計算 */}
+            <MonthlyCostSection
+              monthlyCost={monthlyCost}
+              usageHours={usageHours}
+              electricityRate={electricityRate}
+              onUsageUpdate={handleUsageUpdate}
+            />
+
+            {/* 推奨電源リスト */}
+            {recommendedPSUs.length > 0 && (
+              <RecommendedPSUSection psus={recommendedPSUs} />
+            )}
+
+            {/* PSU推奨カテゴリ */}
+            {psuRecommendations && (
+              <PSURecommendationSection recommendations={psuRecommendations} />
+            )}
+          </div>
+        )}
       </div>
+    </div>
+  );
+};
 
-      {/* メイン情報 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="text-center">
-          <div className="text-2xl font-bold text-gray-900">
-            {result.totalConsumption}W
-          </div>
-          <div className="text-sm text-gray-600">総消費電力</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-blue-600">
-            {result.recommendedPsu}W
-          </div>
-          <div className="text-sm text-gray-600">推奨電源容量</div>
-        </div>
-        <div className="text-center">
-          <div className={`text-2xl font-bold ${getLoadColor(result.loadPercentage)}`}>
-            {result.loadPercentage.toFixed(1)}%
-          </div>
-          <div className="text-sm text-gray-600">負荷率</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-green-600">
-            {result.headroom.toFixed(1)}%
-          </div>
-          <div className="text-sm text-gray-600">余裕</div>
+// メトリクスカードコンポーネント
+const PowerMetricCard: React.FC<{
+  title: string;
+  value: number;
+  unit: string;
+  color: string;
+  bgColor: string;
+}> = ({ title, value, unit, color, bgColor }) => (
+  <div className={`${bgColor} rounded-lg p-4`}>
+    <h3 className="text-sm font-medium text-gray-700">{title}</h3>
+    <div className="mt-1">
+      <span className={`text-2xl font-bold ${color}`}>{value}</span>
+      <span className="text-sm text-gray-600 ml-1">{unit}</span>
+    </div>
+  </div>
+);
+
+// 警告セクション
+const PowerWarningsSection: React.FC<{
+  warnings: Record<string, PowerWarning[]>;
+}> = ({ warnings }) => {
+  const { critical, high, medium, low } = warnings;
+  
+  if (critical.length === 0 && high.length === 0 && medium.length === 0 && low.length === 0) {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="flex items-center">
+          <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+          <span className="text-sm font-medium text-green-800">問題は検出されませんでした</span>
         </div>
       </div>
+    );
+  }
 
-      {/* 警告 */}
-      {result.warnings.length > 0 && (
-        <div className="mb-6 space-y-2">
-          {result.warnings.map((warning, index) => (
-            <div
-              key={index}
-              className={`p-3 rounded-lg border ${getSeverityColor(warning.severity)}`}
-            >
-              <div className="font-medium">{warning.message}</div>
-              {warning.suggestion && (
-                <div className="text-sm mt-1">{warning.suggestion}</div>
-              )}
-            </div>
-          ))}
-        </div>
+  return (
+    <div className="space-y-3">
+      {critical.length > 0 && (
+        <WarningList warnings={critical} type="critical" color="red" />
       )}
-
-      {/* コネクタチェック */}
-      {connectorCheck && !connectorCheck.sufficient && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <h4 className="font-medium text-red-800 mb-2">電源コネクタ不足</h4>
-          <ul className="text-red-700 text-sm space-y-1">
-            {connectorCheck.missing.map((missing, index) => (
-              <li key={index}>• {missing}</li>
-            ))}
-          </ul>
-        </div>
+      {high.length > 0 && (
+        <WarningList warnings={high} type="high" color="orange" />
       )}
-
-      {/* 設定パネル */}
-      {expanded && (
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h4 className="font-medium text-gray-900 mb-3">計算設定</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* 使用シナリオ */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                使用シナリオ
-              </label>
-              <select
-                value={config.scenario}
-                onChange={(e) => handleConfigChange({ scenario: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {LOAD_SCENARIOS.map((scenario) => (
-                  <option key={scenario.name} value={scenario.name}>
-                    {scenario.description}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 安全マージン */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                安全マージン ({(config.safetyMargin * 100).toFixed(0)}%)
-              </label>
-              <input
-                type="range"
-                min="10"
-                max="50"
-                value={config.safetyMargin * 100}
-                onChange={(e) => handleConfigChange({ safetyMargin: parseInt(e.target.value) / 100 })}
-                className="w-full"
-              />
-            </div>
-
-            {/* 将来のアップグレードマージン */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                アップグレードマージン ({(config.futureUpgradeMargin * 100).toFixed(0)}%)
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="30"
-                value={config.futureUpgradeMargin * 100}
-                onChange={(e) => handleConfigChange({ futureUpgradeMargin: parseInt(e.target.value) / 100 })}
-                className="w-full"
-              />
-            </div>
-
-            {/* 周辺機器を含む */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="includePeripherals"
-                checked={config.includePeripherals}
-                onChange={(e) => handleConfigChange({ includePeripherals: e.target.checked })}
-                className="mr-2"
-              />
-              <label htmlFor="includePeripherals" className="text-sm font-medium text-gray-700">
-                周辺機器を含む ({config.peripheralsPower}W)
-              </label>
-            </div>
-          </div>
-        </div>
+      {medium.length > 0 && (
+        <WarningList warnings={medium} type="medium" color="yellow" />
       )}
-
-      {/* 消費電力内訳 */}
-      {expanded && (
-        <div className="mb-6">
-          <h4 className="font-medium text-gray-900 mb-3">消費電力内訳</h4>
-          <div className="space-y-2">
-            {/* CPU */}
-            <div className="flex justify-between items-center py-2 border-b border-gray-100">
-              <div className="text-sm text-gray-700">{result.breakdown.cpu.component}</div>
-              <div className="text-sm font-medium text-gray-900">
-                {result.breakdown.cpu.idle}W / {result.breakdown.cpu.typical}W / {result.breakdown.cpu.peak}W
-              </div>
-            </div>
-
-            {/* GPU */}
-            <div className="flex justify-between items-center py-2 border-b border-gray-100">
-              <div className="text-sm text-gray-700">{result.breakdown.gpu.component}</div>
-              <div className="text-sm font-medium text-gray-900">
-                {result.breakdown.gpu.idle}W / {result.breakdown.gpu.typical}W / {result.breakdown.gpu.peak}W
-              </div>
-            </div>
-
-            {/* マザーボード */}
-            <div className="flex justify-between items-center py-2 border-b border-gray-100">
-              <div className="text-sm text-gray-700">{result.breakdown.motherboard.component}</div>
-              <div className="text-sm font-medium text-gray-900">
-                {result.breakdown.motherboard.idle}W / {result.breakdown.motherboard.typical}W / {result.breakdown.motherboard.peak}W
-              </div>
-            </div>
-
-            {/* メモリ */}
-            <div className="flex justify-between items-center py-2 border-b border-gray-100">
-              <div className="text-sm text-gray-700">{result.breakdown.memory.component}</div>
-              <div className="text-sm font-medium text-gray-900">
-                {result.breakdown.memory.idle}W / {result.breakdown.memory.typical}W / {result.breakdown.memory.peak}W
-              </div>
-            </div>
-
-            {/* ストレージ */}
-            {result.breakdown.storage.map((storage, index) => (
-              <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100">
-                <div className="text-sm text-gray-700">{storage.component}</div>
-                <div className="text-sm font-medium text-gray-900">
-                  {storage.idle}W / {storage.typical}W / {storage.peak}W
-                </div>
-              </div>
-            ))}
-
-            {/* 冷却 */}
-            {result.breakdown.cooling.map((cooling, index) => (
-              <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100">
-                <div className="text-sm text-gray-700">{cooling.component}</div>
-                <div className="text-sm font-medium text-gray-900">
-                  {cooling.idle}W / {cooling.typical}W / {cooling.peak}W
-                </div>
-              </div>
-            ))}
-
-            {/* その他 */}
-            <div className="flex justify-between items-center py-2 border-b border-gray-100">
-              <div className="text-sm text-gray-700">{result.breakdown.other.component}</div>
-              <div className="text-sm font-medium text-gray-900">
-                {result.breakdown.other.idle}W / {result.breakdown.other.typical}W / {result.breakdown.other.peak}W
-              </div>
-            </div>
-
-            {/* 合計 */}
-            <div className="flex justify-between items-center py-2 font-semibold text-gray-900 bg-gray-50 px-2 rounded">
-              <div>合計</div>
-              <div>
-                {result.breakdown.total.idle}W / {result.breakdown.total.typical}W / {result.breakdown.total.peak}W
-              </div>
-            </div>
-          </div>
-          <div className="text-xs text-gray-500 mt-2">
-            アイドル時 / 通常時 / ピーク時
-          </div>
-        </div>
-      )}
-
-      {/* 推奨事項 */}
-      {result.recommendations.length > 0 && expanded && (
-        <div>
-          <h4 className="font-medium text-gray-900 mb-3">推奨事項</h4>
-          <div className="space-y-3">
-            {result.recommendations.map((rec, index) => (
-              <div key={index} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="font-medium text-blue-800 mb-1">{rec.title}</div>
-                <div className="text-blue-700 text-sm mb-2">{rec.description}</div>
-                {rec.alternatives && rec.alternatives.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium text-blue-800">代替案:</div>
-                    {rec.alternatives.map((alt, altIndex) => (
-                      <div key={altIndex} className="text-sm text-blue-700 bg-blue-100 p-2 rounded">
-                        <div className="font-medium">{alt.name} - ¥{alt.price.toLocaleString()}</div>
-                        <div>{alt.wattage}W, {alt.efficiency}</div>
-                        <div className="text-xs">{alt.improvement}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+      {low.length > 0 && (
+        <WarningList warnings={low} type="low" color="blue" />
       )}
     </div>
   );
 };
+
+// 警告リスト
+const WarningList: React.FC<{
+  warnings: PowerWarning[];
+  type: string;
+  color: string;
+}> = ({ warnings, type, color }) => (
+  <div className={`bg-${color}-50 border border-${color}-200 rounded-lg p-4`}>
+    <h4 className={`text-sm font-medium text-${color}-800 mb-2`}>
+      {type === 'critical' ? '重要な問題' : type === 'high' ? '注意が必要' : type === 'medium' ? '改善推奨' : '情報'}
+    </h4>
+    <ul className="space-y-2">
+      {warnings.map((warning, index) => (
+        <li key={index} className={`text-sm text-${color}-700`}>
+          <div>{warning.message}</div>
+          {warning.recommendation && (
+            <div className={`text-${color}-600 mt-1 text-xs`}>
+              推奨: {warning.recommendation}
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
+// パーツ別内訳セクション
+const PowerBreakdownSection: React.FC<{
+  breakdown: any[];
+}> = ({ breakdown }) => (
+  <div>
+    <h3 className="text-sm font-medium text-gray-900 mb-3">パーツ別消費電力</h3>
+    <div className="space-y-2">
+      {breakdown.map((item, index) => (
+        <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+          <div>
+            <span className="text-sm font-medium text-gray-900">{item.partName}</span>
+            <span className="text-xs text-gray-500 ml-2">({item.category})</span>
+          </div>
+          <div className="text-right">
+            <div className="text-sm text-gray-900">{item.maxPower}W</div>
+            <div className="text-xs text-gray-500">最大</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// 月間電気代セクション
+const MonthlyCostSection: React.FC<{
+  monthlyCost: any;
+  usageHours: number;
+  electricityRate: number;
+  onUsageUpdate: (hours: number, rate: number) => void;
+}> = ({ monthlyCost, usageHours, electricityRate, onUsageUpdate }) => (
+  <div>
+    <h3 className="text-sm font-medium text-gray-900 mb-3">月間電気代試算</h3>
+    
+    {/* 設定 */}
+    <div className="grid grid-cols-2 gap-4 mb-4">
+      <div>
+        <label className="block text-xs text-gray-600 mb-1">1日の使用時間</label>
+        <input
+          type="number"
+          value={usageHours}
+          onChange={(e) => onUsageUpdate(usageHours, Number(e.target.value))}
+          className="w-full px-3 py-1 border border-gray-300 rounded text-sm"
+          min="10" max="50"
+        />
+      </div>
+    </div>
+
+    {/* 電気代表示 */}
+    {monthlyCost && (
+      <div className="bg-gray-50 rounded-lg p-4">
+        <div className="grid grid-cols-3 gap-4 text-center">
+          <div>
+            <div className="text-xs text-gray-600">アイドル時</div>
+            <div className="text-sm font-medium text-gray-900">¥{Math.round(monthlyCost.idle)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-600">通常使用時</div>
+            <div className="text-sm font-medium text-gray-900">¥{Math.round(monthlyCost.normal)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-600">ピーク時</div>
+            <div className="text-sm font-medium text-gray-900">¥{Math.round(monthlyCost.peak)}</div>
+          </div>
+        </div>
+        <div className="mt-3 pt-3 border-t border-gray-200 text-center">
+          <div className="text-xs text-gray-600">月間合計</div>
+          <div className="text-lg font-bold text-gray-900">¥{Math.round(monthlyCost.total)}</div>
+        </div>
+      </div>
+    )}
+  </div>
+);
+
+// 推奨電源セクション
+const RecommendedPSUSection: React.FC<{
+  psus: any[];
+}> = ({ psus }) => (
+  <div>
+    <h3 className="text-sm font-medium text-gray-900 mb-3">推奨電源ユニット</h3>
+    <div className="space-y-3">
+      {psus.slice(0, 3).map((psu, index) => (
+        <div key={index} className="border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-medium text-gray-900">{psu.name}</h4>
+              <div className="text-xs text-gray-600 mt-1">
+                {psu.capacity}W • {psu.efficiency} • {psu.modular ? 'モジュラー' : '非モジュラー'}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm font-medium text-gray-900">¥{psu.price.toLocaleString()}</div>
+              <div className="text-xs text-gray-600">効率 {psu.efficiencyPercentage}%</div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// PSU推奨カテゴリセクション
+const PSURecommendationSection: React.FC<{
+  recommendations: any[];
+}> = ({ recommendations }) => (
+  <div>
+    <h3 className="text-sm font-medium text-gray-900 mb-3">電源選択ガイド</h3>
+    <div className="space-y-3">
+      {recommendations.map((rec, index) => (
+        <div key={index} className="border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-medium text-gray-900">{rec.name}</h4>
+            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+              {rec.range[0]}W - {rec.range[1]}W
+            </span>
+          </div>
+          <div className="text-xs text-gray-600 mb-2">{rec.description}</div>
+          <div className="text-xs text-blue-600 font-medium">推奨効率: {rec.efficiency}</div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+export default PowerCalculator;Update(Number(e.target.value), electricityRate)}
+          className="w-full px-3 py-1 border border-gray-300 rounded text-sm"
+          min="1" max="24"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-600 mb-1">電気料金 (円/kWh)</label>
+        <input
+          type="number"
+          value={electricityRate}
+          onChange={(e) => onUsage

@@ -1,0 +1,355 @@
+// src/data/static/powerSpecs.json
+// 電源計算用の静的データ
+
+{
+  "cpu": [
+    {
+      "partId": "intel-i7-13700k",
+      "name": "Intel Core i7-13700K",
+      "basePower": 125,
+      "maxPower": 253,
+      "idlePower": 8,
+      "peakPower": 280,
+      "efficiency": 85,
+      "socket": "LGA1700",
+      "cores": 16,
+      "baseFreq": 3.4,
+      "maxFreq": 5.4
+    },
+    {
+      "partId": "intel-i5-13600k",
+      "name": "Intel Core i5-13600K",
+      "basePower": 125,
+      "maxPower": 181,
+      "idlePower": 6,
+      "peakPower": 200,
+      "efficiency": 87,
+      "socket": "LGA1700",
+      "cores": 14,
+      "baseFreq": 3.5,
+      "maxFreq": 5.1
+    },
+    {
+      "partId": "amd-7900x",
+      "name": "AMD Ryzen 9 7900X",
+      "basePower": 170,
+      "maxPower": 230,
+      "idlePower": 10,
+      "peakPower": 250,
+      "efficiency": 83,
+      "socket": "AM5",
+      "cores": 12,
+      "baseFreq": 4.7,
+      "maxFreq": 5.6
+    },
+    {
+      "partId": "amd-7700x",
+      "name": "AMD Ryzen 7 7700X",
+      "basePower": 105,
+      "maxPower": 142,
+      "idlePower": 8,
+      "peakPower": 160,
+      "efficiency": 86,
+      "socket": "AM5",
+      "cores": 8,
+      "baseFreq": 4.5,
+      "maxFreq": 5.4
+    }
+  ],
+  "gpu": [
+    {
+      "partId": "rtx-4090",
+      "name": "NVIDIA GeForce RTX 4090",
+      "basePower": 350,
+      "maxPower": 450,
+      "idlePower": 25,
+      "peakPower": 480,
+      "efficiency": 78,
+      "memory": 24,
+      "memoryType": "GDDR6X",
+      "recommendedPSU": 850
+    },
+    {
+      "partId": "rtx-4080",
+      "name": "NVIDIA GeForce RTX 4080",
+      "basePower": 250,
+      "maxPower": 320,
+      "idlePower": 20,
+      "peakPower": 350,
+      "efficiency": 80,
+      "memory": 16,
+      "memoryType": "GDDR6X",
+      "recommendedPSU": 750
+    },
+    {
+      "partId": "rtx-4070",
+      "name": "NVIDIA GeForce RTX 4070",
+      "basePower": 180,
+      "maxPower": 220,
+      "idlePower": 15,
+      "peakPower": 240,
+      "efficiency": 82,
+      "memory": 12,
+      "memoryType": "GDDR6X",
+      "recommendedPSU": 650
+    },
+    {
+      "partId": "rx-7900xtx",
+      "name": "AMD Radeon RX 7900 XTX",
+      "basePower": 300,
+      "maxPower": 355,
+      "idlePower": 28,
+      "peakPower": 380,
+      "efficiency": 76,
+      "memory": 24,
+      "memoryType": "GDDR6",
+      "recommendedPSU": 800
+    },
+    {
+      "partId": "rx-7700xt",
+      "name": "AMD Radeon RX 7700 XT",
+      "basePower": 220,
+      "maxPower": 245,
+      "idlePower": 18,
+      "peakPower": 270,
+      "efficiency": 79,
+      "memory": 12,
+      "memoryType": "GDDR6",
+      "recommendedPSU": 700
+    }
+  ],
+  "motherboard": [
+    {
+      "partId": "mb-asus-z790",
+      "name": "ASUS ROG STRIX Z790-E",
+      "basePower": 30,
+      "maxPower": 45,
+      "idlePower": 25,
+      "efficiency": 90,
+      "socket": "LGA1700",
+      "formFactor": "ATX",
+      "memorySlots": 4,
+      "maxMemory": 128
+    },
+    {
+      "partId": "mb-msi-b650",
+      "name": "MSI MAG B650 TOMAHAWK",
+      "basePower": 25,
+      "maxPower": 35,
+      "idlePower": 20,
+      "efficiency": 88,
+      "socket": "AM5",
+      "formFactor": "ATX",
+      "memorySlots": 4,
+      "maxMemory": 128
+    }
+  ],
+  "memory": [
+    {
+      "speed": 5600,
+      "type": "DDR5",
+      "modules": 2
+    },
+    {
+      "partId": "ddr5-16gb-5200",
+      "name": "G.Skill Trident Z5 16GB DDR5-5200",
+      "basePower": 4,
+      "maxPower": 6,
+      "idlePower": 2,
+      "efficiency": 96,
+      "capacity": 16,
+      "speed": 5200,
+      "type": "DDR5",
+      "modules": 2
+    },
+    {
+      "partId": "ddr4-32gb-3200",
+      "name": "Corsair Vengeance LPX 32GB DDR4-3200",
+      "basePower": 4,
+      "maxPower": 5,
+      "idlePower": 2,
+      "efficiency": 97,
+      "capacity": 32,
+    },
+    {
+      "partId": "ddr5-32gb-5600",
+      "name": "Corsair Vengeance 32GB DDR5-5600",
+      "basePower": 6,
+      "maxPower": 8,
+      "idlePower": 3,
+      "efficiency": 95,
+      "capacity": 32,
+      "speed": 3200,
+      "type": "DDR4",
+      "modules": 2
+    }
+  ],
+  "storage": [
+    {
+      "partId": "nvme-2tb-980pro",
+      "name": "Samsung 980 PRO 2TB NVMe SSD",
+      "basePower": 6,
+      "maxPower": 8,
+      "idlePower": 2,
+      "efficiency": 92,
+      "capacity": 2000,
+      "type": "NVMe",
+      "interface": "PCIe 4.0",
+      "readSpeed": 7000,
+      "writeSpeed": 5100
+    },
+    {
+      "partId": "sata-1tb-860evo",
+      "name": "Samsung 860 EVO 1TB SATA SSD",
+      "basePower": 3,
+      "maxPower": 4,
+      "idlePower": 1,
+      "efficiency": 94,
+      "capacity": 1000,
+      "type": "SATA SSD",
+      "interface": "SATA 3.0",
+      "readSpeed": 550,
+      "writeSpeed": 520
+    },
+    {
+      "partId": "hdd-4tb-wd-black",
+      "name": "WD Black 4TB HDD 7200RPM",
+      "basePower": 8,
+      "maxPower": 12,
+      "idlePower": 4,
+      "efficiency": 85,
+      "capacity": 4000,
+      "type": "HDD",
+      "interface": "SATA 3.0",
+      "rpm": 7200
+    }
+  ],
+  "psu": [
+    {
+      "partId": "psu-corsair-rm850x",
+      "name": "Corsair RM850x 850W 80+ Gold",
+      "basePower": 0,
+      "maxPower": 0,
+      "idlePower": 0,
+      "efficiency": 90,
+      "capacity": 850,
+      "certification": "80+ Gold",
+      "modular": true,
+      "fanless": false
+    },
+    {
+      "partId": "psu-seasonic-focus-750",
+      "name": "Seasonic Focus GX-750 750W 80+ Gold",
+      "basePower": 0,
+      "maxPower": 0,
+      "idlePower": 0,
+      "efficiency": 90,
+      "capacity": 750,
+      "certification": "80+ Gold",
+      "modular": true,
+      "fanless": false
+    },
+    {
+      "partId": "psu-evga-supernova-1000",
+      "name": "EVGA SuperNOVA 1000 G5 80+ Gold",
+      "basePower": 0,
+      "maxPower": 0,
+      "idlePower": 0,
+      "efficiency": 90,
+      "capacity": 1000,
+      "certification": "80+ Gold",
+      "modular": true,
+      "fanless": false
+    }
+  ],
+  "cooler": [
+    {
+      "partId": "cooler-noctua-nh-d15",
+      "name": "Noctua NH-D15 Air Cooler",
+      "basePower": 0,
+      "maxPower": 3,
+      "idlePower": 0,
+      "efficiency": 98,
+      "type": "Air",
+      "fanCount": 2,
+      "maxTDP": 200,
+      "height": 165
+    },
+    {
+      "partId": "cooler-aio-280mm",
+      "name": "Corsair H115i RGB 280mm AIO",
+      "basePower": 15,
+      "maxPower": 25,
+      "idlePower": 8,
+      "efficiency": 85,
+      "type": "AIO",
+      "radiatorSize": 280,
+      "fanCount": 2,
+      "maxTDP": 250
+    },
+    {
+      "partId": "cooler-aio-360mm",
+      "name": "NZXT Kraken Z73 360mm AIO",
+      "basePower": 20,
+      "maxPower": 30,
+      "idlePower": 10,
+      "efficiency": 83,
+      "type": "AIO",
+      "radiatorSize": 360,
+      "fanCount": 3,
+      "maxTDP": 300
+    }
+  ],
+  "case": [
+    {
+      "partId": "case-fractal-define-7",
+      "name": "Fractal Design Define 7 Mid Tower",
+      "basePower": 5,
+      "maxPower": 15,
+      "idlePower": 3,
+      "efficiency": 80,
+      "formFactor": "Mid Tower",
+      "fanIncluded": 2,
+      "maxFans": 9,
+      "ledLighting": false
+    },
+    {
+      "partId": "case-lian-li-o11",
+      "name": "Lian Li O11 Dynamic Mid Tower",
+      "basePower": 8,
+      "maxPower": 20,
+      "idlePower": 5,
+      "efficiency": 75,
+      "formFactor": "Mid Tower",
+      "fanIncluded": 0,
+      "maxFans": 10,
+      "ledLighting": true
+    }
+  ],
+  "monitor": [
+    {
+      "partId": "monitor-lg-27gp950",
+      "name": "LG 27GP950-B 27\" 4K 144Hz",
+      "basePower": 45,
+      "maxPower": 65,
+      "idlePower": 1,
+      "efficiency": 85,
+      "screenSize": 27,
+      "resolution": "3840x2160",
+      "refreshRate": 144,
+      "panelType": "IPS"
+    },
+    {
+      "partId": "monitor-asus-pg279qm",
+      "name": "ASUS ROG PG279QM 27\" QHD 240Hz",
+      "basePower": 35,
+      "maxPower": 50,
+      "idlePower": 1,
+      "efficiency": 87,
+      "screenSize": 27,
+      "resolution": "2560x1440",
+      "refreshRate": 240,
+      "panelType": "IPS"
+    }
+  ]
+}
