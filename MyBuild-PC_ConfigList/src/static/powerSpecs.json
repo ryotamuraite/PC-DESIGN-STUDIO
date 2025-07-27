@@ -1,0 +1,39 @@
+// src/data/static/powerSpecs.json
+// 電源計算用の静的データ
+
+import { DefaultPowerData } from '../../types/power';
+
+export const powerSpecsData: DefaultPowerData = {
+  motherboard: {
+    atx: 25,        // ATXマザーボード 25W
+    microATX: 20,   // Micro-ATX 20W
+    miniITX: 15     // Mini-ITX 15W
+  },
+  memory: {
+    ddr4: 3,        // DDR4 1本あたり 3W
+    ddr5: 4         // DDR5 1本あたり 4W
+  },
+  storage: {
+    ssd25: 3,       // 2.5" SSD 3W
+    hdd35: 8,       // 3.5" HDD 8W
+    nvme: 5         // NVMe SSD 5W
+  },
+  cooling: {
+    airCooler: 3,      // 空冷CPUクーラー 3W
+    aio120: 8,         // 120mm AIO 8W
+    aio240: 12,        // 240mm AIO 12W
+    aio280: 15,        // 280mm AIO 15W
+    aio360: 18,        // 360mm AIO 18W
+    caseFan120: 2,     // 120mmケースファン 2W
+    caseFan140: 3      // 140mmケースファン 3W
+  },
+  other: {
+    usb: 2.5,          // USBデバイス1つあたり 2.5W
+    rgb: 10,           // RGBライティング 10W
+    networking: 3      // ネットワーク機能 3W
+  }
+};
+
+export function getPowerData(): DefaultPowerData {
+  return powerSpecsData;
+}
