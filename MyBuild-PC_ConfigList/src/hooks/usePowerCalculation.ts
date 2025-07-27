@@ -25,6 +25,20 @@ interface UsePowerCalculationReturn {
   updateUsageSettings: (hours: number, rate: number) => void;
 }
 
+// デバウンス用ユーティリティ関数
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout;
+  
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
 export const usePowerCalculation = (
   configuration: PCConfiguration | null,
   options: UsePowerCalculationOptions = {}
@@ -55,7 +69,8 @@ export const usePowerCalculation = (
       const result = powerCalculator.calculatePowerConsumption(config);
       setPowerResult(result);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '電力計算中にエラーが発生しました';
+      const errorMessage = err instanceof Error ? 
+        err.message : '電力計算中にエラーが発生しました';
       setError(errorMessage);
       console.error('Power calculation error:', err);
     } finally {
@@ -64,8 +79,8 @@ export const usePowerCalculation = (
   }, [powerCalculator]);
 
   // デバウンス付きの計算関数
-  const debouncedCalculate = useCallback(
-    debounce((config: PCConfiguration) => {
+  const debouncedCalculate = useMemo(
+    () => debounce((config: PCConfiguration) => {
       calculatePower(config);
     }, debounceMs),
     [calculatePower, debounceMs]
@@ -130,19 +145,6 @@ export const usePowerCalculation = (
     updateUsageSettings
   };
 };
-
-// デバウンス用ユーティリティ関数
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
-  
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-}
 
 // 電力効率評価用のヘルパーフック
 export const usePowerEfficiencyRating = (powerResult: PowerCalculationResult | null) => {

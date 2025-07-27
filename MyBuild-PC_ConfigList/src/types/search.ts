@@ -1,6 +1,8 @@
 // src/types/search.ts
 // 検索・フィルタ機能用の型定義
 
+import { PartCategory, Part } from './index';
+
 export interface SearchQuery {
   term: string;              // 検索キーワード
   category?: PartCategory;   // カテゴリフィルタ
@@ -26,7 +28,7 @@ export interface SearchFilters {
   
   // GPU固有フィルタ
   memory?: NumberRange;
-  memoryType?: string[];
+  gpuMemoryType?: string[];  // 修正: memoryType → gpuMemoryType
   rayTracing?: boolean;
   dlss?: boolean;
   
@@ -39,7 +41,7 @@ export interface SearchFilters {
   wifi?: boolean;
   
   // メモリ固有フィルタ
-  memoryType?: string[];
+  ramMemoryType?: string[];  // 修正: memoryType → ramMemoryType
   capacity?: NumberRange;
   speed?: NumberRange;
   sticks?: NumberRange;
@@ -244,7 +246,7 @@ export interface SearchMetrics {
   resultCount: number;       // 結果件数
 }
 
-// 検索機能インターface
+// 検索機能インターフェース
 export interface SearchService {
   search(query: SearchQuery): Promise<SearchResult>;
   autocomplete(term: string, limit?: number): Promise<AutocompleteResult>;
@@ -264,7 +266,7 @@ export interface FilterBuilder {
   priceRange(min: number, max: number): FilterBuilder;
   brands(brands: string[]): FilterBuilder;
   availability(availability: string[]): FilterBuilder;
-  custom(key: string, value: any): FilterBuilder;
+  custom(key: string, value: string | number | boolean): FilterBuilder; // 修正: any → 適切な型
   build(): SearchFilters;
 }
 

@@ -1,11 +1,12 @@
+// src/components/calculators/PowerCalculator.tsx
 import React, { useState } from 'react';
 import { 
   usePowerCalculation, 
   usePowerEfficiencyRating, 
   usePSURecommendation,
   usePowerWarningsByPriority 
-} from '../../hooks/usePowerCalculation';
-import { PCConfiguration, PowerWarning } from '../../types';
+} from '@/hooks/usePowerCalculation';
+import { PCConfiguration, PowerWarning, PowerConsumption, PSUSpecification } from '@/types';
 
 interface PowerCalculatorProps {
   configuration: PCConfiguration;
@@ -128,82 +129,96 @@ export const PowerCalculator: React.FC<PowerCalculatorProps> = ({
           />
         </div>
 
-        {/* 推奨電源容量 */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-gray-900 mb-2">推奨電源容量</h3>
-          <div className="flex items-center space-x-4">
-            <span className="text-2xl font-bold text-gray-900">
-              {powerResult.recommendedPSU}W
-            </span>
-            <span className="text-sm text-gray-600">
-              (安全マージン {powerResult.safetyMargin}% 含む)
-            </span>
-          </div>
-        </div>
-
-        {/* 効率評価 */}
-        {efficiencyRating && (
-          <div className="bg-white border rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-900 mb-2">電力効率</h3>
-            <div className="flex items-center space-x-3">
-              <div className="flex-1 bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${efficiencyRating.percentage}%` }}
-                />
+        {/* 効率評価と推奨電源 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-gray-900">電源効率評価</h3>
+            {efficiencyRating && (
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-600">総合効率</span>
+                  <span className={`text-sm font-medium ${efficiencyRating.color}`}>
+                    {Math.round(efficiencyRating.percentage)}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                  <div 
+                    className={`h-2 rounded-full ${
+                      efficiencyRating.rating === 'excellent' ? 'bg-green-500' :
+                      efficiencyRating.rating === 'good' ? 'bg-blue-500' :
+                      efficiencyRating.rating === 'fair' ? 'bg-yellow-500' :
+                      'bg-red-500'
+                    }`}
+                    style={{ width: `${efficiencyRating.percentage}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-600">{efficiencyRating.description}</p>
               </div>
-              <span className={`text-sm font-medium ${efficiencyRating.color}`}>
-                {efficiencyRating.percentage}%
-              </span>
+            )}
+
+            <div className="border border-gray-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-gray-900 mb-2">推奨電源容量</h4>
+              <div className="text-2xl font-bold text-blue-600">
+                {powerResult.recommendedPSU}W
+              </div>
+              <p className="text-xs text-gray-600 mt-1">
+                20%の安全マージンを含む
+              </p>
             </div>
-            <p className="text-sm text-gray-600 mt-1">{efficiencyRating.description}</p>
           </div>
-        )}
 
-        {/* 警告表示 */}
-        <PowerWarningsSection warnings={warningsByPriority} />
-
-        {/* 詳細表示トグル */}
-        <button
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className="w-full text-left text-sm text-blue-600 hover:text-blue-700 font-medium"
-        >
-          {showAdvanced ? '詳細を非表示' : '詳細を表示'}
-          <svg 
-            className={`inline-block ml-1 w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-
-        {/* 詳細セクション */}
-        {showAdvanced && (
-          <div className="space-y-6 border-t pt-6">
-            {/* パーツ別内訳 */}
-            <PowerBreakdownSection breakdown={powerResult.breakdown} />
-
-            {/* 月間電気代計算 */}
-            <MonthlyCostSection
+          {/* 電気代計算 */}
+          {monthlyCost && (
+            <UsageCostCalculator
               monthlyCost={monthlyCost}
               usageHours={usageHours}
               electricityRate={electricityRate}
               onUsageUpdate={handleUsageUpdate}
             />
+          )}
+        </div>
 
-            {/* 推奨電源リスト */}
-            {recommendedPSUs.length > 0 && (
-              <RecommendedPSUSection psus={recommendedPSUs} />
-            )}
-
-            {/* PSU推奨カテゴリ */}
-            {psuRecommendations && (
-              <PSURecommendationSection recommendations={psuRecommendations} />
-            )}
+        {/* 警告とエラー */}
+        {warningsByPriority && (
+          <div>
+            <h3 className="text-sm font-medium text-gray-900 mb-3">問題と警告</h3>
+            <PowerWarningsSection warnings={warningsByPriority} />
           </div>
         )}
+
+        {/* 推奨電源ユニット */}
+        {recommendedPSUs && recommendedPSUs.length > 0 && (
+          <RecommendedPSUSection psus={recommendedPSUs} />
+        )}
+
+        {/* PSU選択ガイド */}
+        {psuRecommendations && (
+          <PSURecommendationSection recommendations={psuRecommendations} />
+        )}
+
+        {/* 詳細表示 */}
+        <div>
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="flex items-center text-sm text-blue-600 hover:text-blue-700"
+          >
+            <span>詳細表示</span>
+            <svg 
+              className={`ml-1 w-4 h-4 transform transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          
+          {showAdvanced && (
+            <div className="mt-4 space-y-4">
+              <PowerBreakdownTable breakdown={powerResult.consumptions} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -220,7 +235,7 @@ const PowerMetricCard: React.FC<{
   <div className={`${bgColor} rounded-lg p-4`}>
     <h3 className="text-sm font-medium text-gray-700">{title}</h3>
     <div className="mt-1">
-      <span className={`text-2xl font-bold ${color}`}>{value}</span>
+      <span className={`text-2xl font-bold ${color}`}>{Math.round(value)}</span>
       <span className="text-sm text-gray-600 ml-1">{unit}</span>
     </div>
   </div>
@@ -271,63 +286,58 @@ const WarningList: React.FC<{
 }> = ({ warnings, type, color }) => (
   <div className={`bg-${color}-50 border border-${color}-200 rounded-lg p-4`}>
     <h4 className={`text-sm font-medium text-${color}-800 mb-2`}>
-      {type === 'critical' ? '重要な問題' : type === 'high' ? '注意が必要' : type === 'medium' ? '改善推奨' : '情報'}
+      {type === 'critical' ? '重要な問題' : 
+       type === 'high' ? '注意が必要' : 
+       type === 'medium' ? '改善可能' : 
+       '情報'}
     </h4>
     <ul className="space-y-2">
       {warnings.map((warning, index) => (
         <li key={index} className={`text-sm text-${color}-700`}>
-          <div>{warning.message}</div>
-          {warning.recommendation && (
-            <div className={`text-${color}-600 mt-1 text-xs`}>
-              推奨: {warning.recommendation}
-            </div>
-          )}
+          <div className="flex items-start">
+            <svg className={`w-4 h-4 text-${color}-400 mr-2 mt-0.5 flex-shrink-0`} fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <span>{warning.message}</span>
+          </div>
         </li>
       ))}
     </ul>
   </div>
 );
 
-// パーツ別内訳セクション
-const PowerBreakdownSection: React.FC<{
-  breakdown: any[];
-}> = ({ breakdown }) => (
-  <div>
-    <h3 className="text-sm font-medium text-gray-900 mb-3">パーツ別消費電力</h3>
-    <div className="space-y-2">
-      {breakdown.map((item, index) => (
-        <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-          <div>
-            <span className="text-sm font-medium text-gray-900">{item.partName}</span>
-            <span className="text-xs text-gray-500 ml-2">({item.category})</span>
-          </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-900">{item.maxPower}W</div>
-            <div className="text-xs text-gray-500">最大</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
-// 月間電気代セクション
-const MonthlyCostSection: React.FC<{
-  monthlyCost: any;
+// 使用量計算機
+const UsageCostCalculator: React.FC<{
+  monthlyCost: {
+    idle: number;
+    normal: number;
+    peak: number;
+    total: number;
+  };
   usageHours: number;
   electricityRate: number;
   onUsageUpdate: (hours: number, rate: number) => void;
 }> = ({ monthlyCost, usageHours, electricityRate, onUsageUpdate }) => (
-  <div>
-    <h3 className="text-sm font-medium text-gray-900 mb-3">月間電気代試算</h3>
+  <div className="space-y-4">
+    <h3 className="text-sm font-medium text-gray-900">月間電気代</h3>
     
     {/* 設定 */}
-    <div className="grid grid-cols-2 gap-4 mb-4">
+    <div className="grid grid-cols-2 gap-3">
       <div>
-        <label className="block text-xs text-gray-600 mb-1">1日の使用時間</label>
+        <label className="block text-xs text-gray-600 mb-1">使用時間 (時/日)</label>
         <input
           type="number"
           value={usageHours}
+          onChange={(e) => onUsageUpdate(Number(e.target.value), electricityRate)}
+          className="w-full px-3 py-1 border border-gray-300 rounded text-sm"
+          min="1" max="24"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-600 mb-1">電気料金 (円/kWh)</label>
+        <input
+          type="number"
+          value={electricityRate}
           onChange={(e) => onUsageUpdate(usageHours, Number(e.target.value))}
           className="w-full px-3 py-1 border border-gray-300 rounded text-sm"
           min="10" max="50"
@@ -335,35 +345,33 @@ const MonthlyCostSection: React.FC<{
       </div>
     </div>
 
-    {/* 電気代表示 */}
-    {monthlyCost && (
-      <div className="bg-gray-50 rounded-lg p-4">
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div>
-            <div className="text-xs text-gray-600">アイドル時</div>
-            <div className="text-sm font-medium text-gray-900">¥{Math.round(monthlyCost.idle)}</div>
-          </div>
-          <div>
-            <div className="text-xs text-gray-600">通常使用時</div>
-            <div className="text-sm font-medium text-gray-900">¥{Math.round(monthlyCost.normal)}</div>
-          </div>
-          <div>
-            <div className="text-xs text-gray-600">ピーク時</div>
-            <div className="text-sm font-medium text-gray-900">¥{Math.round(monthlyCost.peak)}</div>
-          </div>
+    {/* 結果表示 */}
+    <div className="border border-gray-200 rounded-lg p-4">
+      <div className="grid grid-cols-3 gap-4 text-center">
+        <div>
+          <div className="text-xs text-gray-600">アイドル時</div>
+          <div className="text-sm font-medium text-gray-900">¥{Math.round(monthlyCost.idle)}</div>
         </div>
-        <div className="mt-3 pt-3 border-t border-gray-200 text-center">
-          <div className="text-xs text-gray-600">月間合計</div>
-          <div className="text-lg font-bold text-gray-900">¥{Math.round(monthlyCost.total)}</div>
+        <div>
+          <div className="text-xs text-gray-600">通常使用時</div>
+          <div className="text-sm font-medium text-gray-900">¥{Math.round(monthlyCost.normal)}</div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-600">ピーク時</div>
+          <div className="text-sm font-medium text-gray-900">¥{Math.round(monthlyCost.peak)}</div>
         </div>
       </div>
-    )}
+      <div className="mt-3 pt-3 border-t border-gray-200 text-center">
+        <div className="text-xs text-gray-600">月間合計</div>
+        <div className="text-lg font-bold text-gray-900">¥{Math.round(monthlyCost.total)}</div>
+      </div>
+    </div>
   </div>
 );
 
 // 推奨電源セクション
 const RecommendedPSUSection: React.FC<{
-  psus: any[];
+  psus: PSUSpecification[];
 }> = ({ psus }) => (
   <div>
     <h3 className="text-sm font-medium text-gray-900 mb-3">推奨電源ユニット</h3>
@@ -390,7 +398,12 @@ const RecommendedPSUSection: React.FC<{
 
 // PSU推奨カテゴリセクション
 const PSURecommendationSection: React.FC<{
-  recommendations: any[];
+  recommendations: Array<{
+    name: string;
+    range: number[];
+    efficiency: string;
+    description: string;
+  }>;
 }> = ({ recommendations }) => (
   <div>
     <h3 className="text-sm font-medium text-gray-900 mb-3">電源選択ガイド</h3>
@@ -411,14 +424,45 @@ const PSURecommendationSection: React.FC<{
   </div>
 );
 
-export default PowerCalculator;Update(Number(e.target.value), electricityRate)}
-          className="w-full px-3 py-1 border border-gray-300 rounded text-sm"
-          min="1" max="24"
-        />
-      </div>
-      <div>
-        <label className="block text-xs text-gray-600 mb-1">電気料金 (円/kWh)</label>
-        <input
-          type="number"
-          value={electricityRate}
-          onChange={(e) => onUsage
+// 電力詳細表
+const PowerBreakdownTable: React.FC<{
+  breakdown: PowerConsumption[];
+}> = ({ breakdown }) => (
+  <div className="border border-gray-200 rounded-lg overflow-hidden">
+    <div className="bg-gray-50 px-4 py-2">
+      <h4 className="text-sm font-medium text-gray-900">コンポーネント別消費電力</h4>
+    </div>
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+              コンポーネント
+            </th>
+            <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+              アイドル時
+            </th>
+            <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+              通常時
+            </th>
+            <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+              最大
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {breakdown.map((consumption, index) => (
+            <tr key={index}>
+              <td className="px-4 py-2 text-sm text-gray-900">{consumption.component}</td>
+              <td className="px-4 py-2 text-sm text-gray-500 text-right">{Math.round(consumption.idlePower)}W</td>
+              <td className="px-4 py-2 text-sm text-gray-500 text-right">{Math.round(consumption.basePower)}W</td>
+              <td className="px-4 py-2 text-sm text-gray-500 text-right">{Math.round(consumption.maxPower)}W</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
+
+export default PowerCalculator;

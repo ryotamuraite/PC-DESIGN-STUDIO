@@ -1,6 +1,8 @@
 // src/types/data.ts
 // データ取得・更新機能用の型定義
 
+import { Part } from './index';
+
 export interface DataSource {
   id: string;
   name: string;
@@ -70,7 +72,7 @@ export interface DataMapping {
     internalField: string;
     transform?: DataTransform;
     required?: boolean;
-    defaultValue?: any;
+    defaultValue?: string | number | boolean | null; // 修正: any → 適切な型
   };
 }
 
@@ -114,211 +116,277 @@ export interface FetchError {
   message: string;
   field?: string;
   record?: number;
-  details?: any;
+  details?: Record<string, unknown>; // 修正: any → Record<string, unknown>
 }
 
-export type FetchErrorType =
-  | 'network_error'          // ネットワークエラー
-  | 'timeout'               // タイムアウト
-  | 'rate_limit'            // レート制限
-  | 'parsing_error'         // パースエラー
-  | 'validation_error'      // バリデーションエラー
-  | 'mapping_error'         // マッピングエラー
-  | 'authentication_error'  // 認証エラー
-  | 'permission_error'      // 権限エラー
-  | 'server_error'          // サーバーエラー
-  | 'unknown_error';        // 不明なエラー
-
 export interface FetchWarning {
-  type: string;
+  type: 'data_quality' | 'compatibility' | 'performance';
   message: string;
   field?: string;
   record?: number;
+  severity: 'low' | 'medium' | 'high';
 }
 
 export interface FetchMetadata {
-  totalPages?: number;
-  currentPage?: number;
-  hasMore?: boolean;
-  rateLimit?: {
-    remaining: number;
-    resetTime: Date;
-  };
-  serverInfo?: Record<string, any>;
-}
-
-// データ更新スケジュール
-export interface UpdateSchedule {
-  id: string;
-  name: string;
-  sources: string[];         // データソースIDの配列
-  cron: string;             // Cron式
-  timezone: string;
-  enabled: boolean;
-  lastRun: Date;
-  nextRun: Date;
-  runCount: number;
-  config: ScheduleConfig;
-}
-
-export interface ScheduleConfig {
-  maxDuration: number;       // 最大実行時間（秒）
-  maxConcurrency: number;    // 同時実行数
-  notifyOnSuccess: boolean;
-  notifyOnError: boolean;
-  retryFailedSources: boolean;
-  cleanupOldData: boolean;
-  backupBeforeUpdate: boolean;
-}
-
-// データ更新ログ
-export interface UpdateLog {
-  id: string;
-  scheduleId: string;
-  startTime: Date;
-  endTime?: Date;
-  status: UpdateStatus;
-  results: FetchResult[];
-  summary: UpdateSummary;
-  errors: UpdateError[];
-}
-
-export type UpdateStatus =
-  | 'running'               // 実行中
-  | 'completed'             // 完了
-  | 'partial'               // 一部完了
-  | 'failed'                // 失敗
-  | 'cancelled';            // キャンセル
-
-export interface UpdateSummary {
-  totalSources: number;
-  successfulSources: number;
-  failedSources: number;
-  totalRecords: number;
-  newRecords: number;
-  updatedRecords: number;
-  deletedRecords: number;
-  duration: number;
-}
-
-export interface UpdateError {
   source: string;
-  error: FetchError;
-  resolved: boolean;
+  version: string;
+  timestamp: Date;
+  checksum?: string;
+  compression?: string;
+  encoding?: string;
 }
 
-// データ品質指標
-export interface DataQuality {
-  completeness: number;      // 完全性（0-1）
-  accuracy: number;         // 正確性（0-1）
-  freshness: number;        // 新鮮度（0-1）
-  consistency: number;      // 一貫性（0-1）
-  validity: number;         // 有効性（0-1）
-  overall: number;          // 総合スコア（0-1）
-  lastCalculated: Date;
-  details: QualityDetails;
+export type FetchErrorType =
+  | 'network'               // ネットワークエラー
+  | 'timeout'               // タイムアウト
+  | 'authentication'        // 認証エラー
+  | 'rate_limit'           // レート制限
+  | 'parsing'              // パースエラー
+  | 'validation'           // バリデーションエラー
+  | 'transformation'       // 変換エラー
+  | 'unknown';             // 不明なエラー
+
+// データ処理・変換
+export interface DataProcessor {
+  process(data: Record<string, unknown>[], config: DataProcessorConfig): Promise<ProcessingResult>;
+  validate(data: Record<string, unknown>[], rules: ValidationRules): Promise<ValidationResult>;
+  transform(data: Record<string, unknown>[], mapping: DataMapping): Promise<Record<string, unknown>[]>;
+  export(data: Part[], format: ExportFormat): Promise<Blob>; // 修正: any → Part[]
 }
 
-export interface QualityDetails {
-  missingFields: Record<string, number>;    // 欠損フィールド
-  invalidValues: Record<string, number>;    // 無効な値
-  duplicateRecords: number;                 // 重複レコード
-  outliers: Record<string, number>;         // 外れ値
-  staleRecords: number;                     // 古いレコード
+export interface ProcessingResult {
+  success: boolean;
+  processedCount: number;
+  skippedCount: number;
+  errorCount: number;
+  warnings: ProcessingWarning[];
+  errors: ProcessingError[];
+  data: Part[];
+  metadata: ProcessingMetadata;
 }
 
-// データ差分
-export interface DataDiff {
-  added: Part[];
-  updated: DataUpdate[];
-  deleted: string[];        // 削除されたパーツのID
-  summary: DiffSummary;
+export interface ProcessingWarning {
+  type: 'data_quality' | 'compatibility' | 'performance';
+  message: string;
+  field?: string;
+  record?: number;
+  severity: 'low' | 'medium' | 'high';
 }
 
-export interface DataUpdate {
-  id: string;
-  changes: FieldChange[];
+export interface ProcessingError {
+  type: 'validation' | 'transformation' | 'mapping' | 'system';
+  message: string;
+  field?: string;
+  record?: number;
+  originalValue?: string | number | boolean;
 }
 
-export interface FieldChange {
-  field: string;
-  oldValue: any;
-  newValue: any;
-  type: 'added' | 'modified' | 'removed';
+export interface ProcessingMetadata {
+  startTime: Date;
+  endTime: Date;
+  duration: number;
+  memoryUsage?: number;
+  cpuUsage?: number;
 }
 
-export interface DiffSummary {
-  totalChanges: number;
-  addedCount: number;
-  updatedCount: number;
-  deletedCount: number;
-  significantChanges: SignificantChange[];
-}
-
-export interface SignificantChange {
-  type: 'price_drop' | 'price_increase' | 'availability_change' | 'new_product' | 'discontinued';
-  count: number;
-  threshold?: number;
-}
-
-// 通知設定
-export interface NotificationConfig {
-  enabled: boolean;
-  channels: NotificationChannel[];
-  conditions: NotificationCondition[];
-}
-
-export interface NotificationChannel {
-  type: 'email' | 'webhook' | 'slack' | 'discord';
-  config: Record<string, any>;
-  enabled: boolean;
-}
-
-export interface NotificationCondition {
-  type: 'error' | 'warning' | 'success' | 'data_change';
-  threshold?: number;
-  cooldown?: number;        // 通知間隔（秒）
-  filter?: Record<string, any>;
-}
-
-// データ取得サービスインターface
-export interface DataFetcher {
-  fetchFromSource(sourceId: string): Promise<FetchResult>;
-  fetchAll(sourceIds?: string[]): Promise<FetchResult[]>;
-  updateData(diff: DataDiff): Promise<void>;
-  validateData(data: Part[]): Promise<ValidationResult>;
-  getDataQuality(): Promise<DataQuality>;
-  getUpdateHistory(limit?: number): Promise<UpdateLog[]>;
-  scheduleUpdate(schedule: UpdateSchedule): Promise<void>;
-  cancelSchedule(scheduleId: string): Promise<void>;
-}
-
+// バリデーション結果
 export interface ValidationResult {
   valid: boolean;
-  errors: ValidationError[];
+  errors: ValidationFailure[];
   warnings: ValidationWarning[];
-  summary: ValidationSummary;
+  statistics: ValidationStatistics;
 }
 
-export interface ValidationError {
-  record: number;
+export interface ValidationFailure {
   field: string;
-  value: any;
+  record: number;
   rule: string;
   message: string;
+  value: string | number | boolean | null;
+  expected?: string | number | boolean | null;
+  details?: Record<string, unknown>; // 修正: any → Record<string, unknown>
+  context?: Record<string, unknown>; // 修正: any → Record<string, unknown>
 }
 
 export interface ValidationWarning {
-  record: number;
   field: string;
-  value: any;
+  record: number;
   message: string;
+  severity: 'low' | 'medium' | 'high';
 }
 
-export interface ValidationSummary {
+export interface ValidationStatistics {
   totalRecords: number;
   validRecords: number;
-  errorRecords: number;
+  invalidRecords: number;
   warningRecords: number;
-  errorRate: number;
+  fieldStatistics: Record<string, FieldStatistics>;
+}
+
+export interface FieldStatistics {
+  totalValues: number;
+  nullValues: number;
+  uniqueValues: number;
+  validValues: number;
+  invalidValues: number;
+  averageLength?: number;
+  minValue?: number;
+  maxValue?: number;
+}
+
+export interface DataProcessorConfig {
+  batchSize: number;
+  maxMemoryUsage: number;
+  parallel: boolean;
+  skipInvalidRecords: boolean;
+  generateStatistics: boolean;
+  customValidators: Record<string, string>; // 修正: any → Record<string, string>
+  customTransformers: Record<string, string>; // 修正: any → Record<string, string>
+}
+
+// データ同期・更新
+export interface DataSyncConfig {
+  sources: string[];         // 同期対象のデータソースID
+  schedule: SyncSchedule;
+  conflictResolution: ConflictResolution;
+  notifications: NotificationConfig;
+  backup: BackupConfig;
+}
+
+export interface SyncSchedule {
+  enabled: boolean;
+  interval: number;          // 分単位
+  timeZone: string;
+  excludeHours?: number[];   // 除外する時間帯
+  maxConcurrentSources: number;
+}
+
+export interface ConflictResolution {
+  strategy: 'latest' | 'priority' | 'manual' | 'merge';
+  priorityOrder?: string[];  // データソースの優先順位
+  mergeFields?: string[];    // マージ対象フィールド
+}
+
+export interface NotificationConfig {
+  onSuccess: boolean;
+  onError: boolean;
+  onWarning: boolean;
+  methods: NotificationMethod[];
+  recipients: string[];
+}
+
+export type NotificationMethod = 'email' | 'slack' | 'webhook' | 'log';
+
+export interface BackupConfig {
+  enabled: boolean;
+  retentionDays: number;
+  compressionLevel: number;
+  encryptionEnabled: boolean;
+  storageLocation: string;
+}
+
+// データキャッシュ
+export interface DataCacheConfig {
+  enabled: boolean;
+  ttl: number;               // 生存時間（秒）
+  maxSize: number;           // 最大キャッシュサイズ（MB）
+  strategy: 'lru' | 'lfu' | 'fifo';
+  compression: boolean;
+}
+
+export interface CacheEntry {
+  key: string;
+  data: Part[];
+  timestamp: Date;
+  expiresAt: Date;
+  size: number;              // バイト数
+  hitCount: number;
+  lastAccessed: Date;
+}
+
+// データ品質監視
+export interface DataQualityMetrics {
+  completeness: number;      // 完全性（0-1）
+  accuracy: number;          // 正確性（0-1）
+  consistency: number;       // 一貫性（0-1）
+  timeliness: number;        // 適時性（0-1）
+  uniqueness: number;        // 一意性（0-1）
+  validity: number;          // 有効性（0-1）
+  overallScore: number;      // 総合スコア（0-1）
+}
+
+export interface QualityCheck {
+  id: string;
+  name: string;
+  description: string;
+  category: QualityCategory;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  automated: boolean;
+  lastRun?: Date;
+  nextRun?: Date;
+  config: QualityCheckConfig;
+}
+
+export type QualityCategory = 
+  | 'completeness'
+  | 'accuracy'
+  | 'consistency'
+  | 'timeliness'
+  | 'uniqueness'
+  | 'validity';
+
+export interface QualityCheckConfig {
+  thresholds: Record<string, number>;
+  rules: QualityRule[];
+  notifications: QualityNotificationConfig;
+}
+
+export interface QualityRule {
+  field: string;
+  condition: string;
+  expectedValue?: string | number | boolean;
+  tolerance?: number;
+  weight: number;
+}
+
+export interface QualityNotificationConfig {
+  enabled: boolean;
+  threshold: number;         // 品質スコア閾値
+  methods: NotificationMethod[];
+  recipients: string[];
+}
+
+// エクスポート形式
+export type ExportFormat = 
+  | 'json'
+  | 'csv'
+  | 'xlsx'
+  | 'xml'
+  | 'yaml'
+  | 'sql';
+
+// データサービス統合インターフェース
+export interface DataService {
+  // データソース管理
+  addSource(source: DataSource): Promise<void>;
+  updateSource(id: string, updates: Partial<DataSource>): Promise<void>;
+  removeSource(id: string): Promise<void>;
+  getSource(id: string): Promise<DataSource>;
+  listSources(): Promise<DataSource[]>;
+  
+  // データ取得・処理
+  fetchData(sourceId: string): Promise<FetchResult>;
+  processData(data: Record<string, unknown>[], config: DataProcessorConfig): Promise<ProcessingResult>;
+  
+  // 同期・更新
+  sync(config?: DataSyncConfig): Promise<void>;
+  scheduleSync(config: DataSyncConfig): Promise<void>;
+  
+  // キャッシュ管理
+  clearCache(pattern?: string): Promise<void>;
+  getCacheStats(): Promise<Record<string, unknown>>;
+  
+  // 品質監視
+  runQualityChecks(): Promise<DataQualityMetrics>;
+  getQualityHistory(days?: number): Promise<DataQualityMetrics[]>;
 }

@@ -3,12 +3,54 @@ import {
   Part, 
   PartCategory, 
   PCConfiguration, 
-  PowerConsumption, 
   PowerCalculationResult, 
-  PowerWarning, 
-  PSUSpecification 
-} from '../types';
-import { powerSpecs } from '@/data/static/powerSpecs.json';
+  PowerWarning,
+  PowerConsumption,
+  PSUSpecification
+} from '@/types';
+
+// デフォルト電力仕様データ（後でJSONファイルから読み込み予定）
+const DEFAULT_POWER_SPECS = {
+  cpu: {
+    default: { idle: 10, base: 65, max: 125, efficiency: 85 },
+    'intel-i7-13700k': { idle: 15, base: 125, max: 253, efficiency: 82 },
+    'intel-i5-13600k': { idle: 12, base: 125, max: 181, efficiency: 84 },
+    'amd-ryzen-7-7700x': { idle: 8, base: 105, max: 142, efficiency: 88 },
+    'amd-ryzen-5-7600x': { idle: 6, base: 105, max: 142, efficiency: 87 }
+  },
+  gpu: {
+    default: { idle: 15, base: 150, max: 250, efficiency: 80 },
+    'rtx-4090': { idle: 25, base: 450, max: 450, efficiency: 78 },
+    'rtx-4080': { idle: 20, base: 320, max: 320, efficiency: 80 },
+    'rtx-4070': { idle: 15, base: 200, max: 200, efficiency: 82 },
+    'rx-7900xtx': { idle: 20, base: 355, max: 355, efficiency: 79 },
+    'rx-7800xt': { idle: 15, base: 263, max: 263, efficiency: 81 }
+  },
+  motherboard: {
+    default: { idle: 20, base: 25, max: 35, efficiency: 90 },
+    'atx': { idle: 25, base: 30, max: 40, efficiency: 88 },
+    'micro-atx': { idle: 20, base: 25, max: 35, efficiency: 90 },
+    'mini-itx': { idle: 15, base: 20, max: 30, efficiency: 92 }
+  },
+  memory: {
+    default: { idle: 2, base: 3, max: 5, efficiency: 95 },
+    'ddr4': { idle: 2, base: 3, max: 5, efficiency: 95 },
+    'ddr5': { idle: 3, base: 4, max: 6, efficiency: 93 }
+  },
+  storage: {
+    default: { idle: 2, base: 5, max: 8, efficiency: 90 },
+    'nvme': { idle: 2, base: 6, max: 9, efficiency: 88 },
+    'ssd': { idle: 1, base: 3, max: 5, efficiency: 95 },
+    'hdd': { idle: 3, base: 8, max: 12, efficiency: 85 }
+  },
+  cooler: {
+    default: { idle: 5, base: 15, max: 25, efficiency: 85 },
+    'air': { idle: 0, base: 0, max: 0, efficiency: 100 }, // パッシブ
+    'aio-120': { idle: 5, base: 10, max: 15, efficiency: 90 },
+    'aio-240': { idle: 8, base: 15, max: 25, efficiency: 88 },
+    'aio-360': { idle: 12, base: 20, max: 35, efficiency: 85 }
+  }
+};
 
 export class PowerCalculatorService {
   private static instance: PowerCalculatorService;
@@ -43,21 +85,38 @@ export class PowerCalculatorService {
       }
     });
 
-    // システムオーバーヘッドを追加（マザーボード、ファン等）
+    // システムオーバーヘッドを追加（ケースファン、LED等）
     const systemOverhead = this.calculateSystemOverhead(config);
+    const systemConsumption: PowerConsumption = {
+      component: 'システム',
+      category: 'other' as PartCategory,
+      partId: 'system-overhead',
+      partName: 'システムオーバーヘッド',
+      idlePower: systemOverhead.idle,
+      basePower: systemOverhead.base,
+      maxPower: systemOverhead.max,
+      powerEfficiency: 80
+    };
+    
+    consumptions.push(systemConsumption);
     totalBasePower += systemOverhead.base;
     totalMaxPower += systemOverhead.max;
     totalIdlePower += systemOverhead.idle;
 
-    // 推奨電源容量を計算（20%のマージン）
-    const safetyMargin = 20;
-    const recommendedPSU = Math.ceil((totalMaxPower * (1 + safetyMargin / 100)) / 50) * 50; // 50W単位で切り上げ
+    // 推奨電源容量を計算（20%の安全マージン）
+    const safetyMargin = 0.2;
+    const recommendedPSU = Math.ceil((totalMaxPower * (1 + safetyMargin)) / 50) * 50; // 50W単位で切り上げ
 
     // 電力効率を計算
     const powerEfficiency = this.calculateOverallEfficiency(consumptions);
 
     // 警告を生成
     warnings.push(...this.generatePowerWarnings(config, totalMaxPower, recommendedPSU));
+
+    // PSU負荷率を計算
+    const currentPSU = config.parts.psu;
+    const psuLoadPercentage = currentPSU ? 
+      (totalMaxPower / this.extractPSUCapacity(currentPSU)) * 100 : 0;
 
     // 最適化判定
     const isOptimal = this.isPowerConfigOptimal(config, totalMaxPower, recommendedPSU);
@@ -67,9 +126,10 @@ export class PowerCalculatorService {
       totalMaxPower,
       totalIdlePower,
       recommendedPSU,
-      safetyMargin,
+      safetyMargin: safetyMargin * 100,
       powerEfficiency,
-      breakdown: consumptions,
+      psuLoadPercentage,
+      consumptions,
       warnings,
       isOptimal
     };
@@ -77,84 +137,93 @@ export class PowerCalculatorService {
 
   // パーツの消費電力情報を取得
   private getPartPowerConsumption(part: Part, category: PartCategory): PowerConsumption | null {
-    const spec = this.findPowerSpec(part.id, category);
+    if (category === 'psu') return null; // PSUは消費電力でなく供給側
     
-    if (!spec) {
-      // デフォルト値を使用
-      const defaultPower = this.getDefaultPowerConsumption(category);
-      return {
-        category,
-        partId: part.id,
-        partName: part.name,
-        basePower: defaultPower.base,
-        maxPower: defaultPower.max,
-        idlePower: defaultPower.idle,
-        powerEfficiency: defaultPower.efficiency
-      };
-    }
-
+    const spec = this.findPowerSpec(part, category);
+    
     return {
+      component: part.name,
       category,
       partId: part.id,
       partName: part.name,
-      basePower: spec.basePower,
-      maxPower: spec.maxPower,
-      idlePower: spec.idlePower,
-      peakPower: spec.peakPower,
+      idlePower: spec.idle,
+      basePower: spec.base,
+      maxPower: spec.max,
       powerEfficiency: spec.efficiency
     };
   }
 
-  // 電力スペックをデータから検索
-  private findPowerSpec(partId: string, category: PartCategory): any {
-    // powerSpecs.jsonから該当するスペックを検索
-    const categorySpecs = (powerSpecs as any)[category];
-    if (!categorySpecs) return null;
-
-    return categorySpecs.find((spec: any) => 
-      spec.partId === partId || 
-      spec.modelNumber === partId ||
-      spec.name.toLowerCase().includes(partId.toLowerCase())
-    );
-  }
-
-  // カテゴリ別デフォルト消費電力
-  private getDefaultPowerConsumption(category: PartCategory): {
+  // 電力スペックを検索
+  private findPowerSpec(part: Part, category: PartCategory): {
+    idle: number;
     base: number;
     max: number;
-    idle: number;
     efficiency: number;
   } {
-    const defaults = {
-      cpu: { base: 65, max: 125, idle: 10, efficiency: 85 },
-      gpu: { base: 150, max: 250, idle: 15, efficiency: 80 },
-      motherboard: { base: 25, max: 35, idle: 20, efficiency: 90 },
-      memory: { base: 3, max: 5, idle: 2, efficiency: 95 },
-      storage: { base: 5, max: 8, idle: 2, efficiency: 90 },
-      psu: { base: 0, max: 0, idle: 0, efficiency: 85 },
-      case: { base: 10, max: 15, idle: 5, efficiency: 80 },
-      cooler: { base: 15, max: 25, idle: 5, efficiency: 85 },
-      monitor: { base: 30, max: 45, idle: 1, efficiency: 85 }
-    };
+    const categorySpecs = DEFAULT_POWER_SPECS[category as keyof typeof DEFAULT_POWER_SPECS];
+    if (!categorySpecs) {
+      return { idle: 5, base: 10, max: 20, efficiency: 85 };
+    }
 
-    return defaults[category] || { base: 10, max: 20, idle: 5, efficiency: 85 };
+    // パーツIDでの直接マッチを試行
+    const partSpec = (categorySpecs as Record<string, {idle: number; base: number; max: number; efficiency: number}>)[part.id];
+    if (partSpec) return partSpec;
+
+    // パーツ名での部分マッチを試行
+    for (const [key, value] of Object.entries(categorySpecs)) {
+      if (key !== 'default' && part.name.toLowerCase().includes(key.toLowerCase())) {
+        return value as {idle: number; base: number; max: number; efficiency: number};
+      }
+    }
+
+    // フォームファクターベースのマッチング（マザーボード等）
+    if (category === 'motherboard' && part.specifications?.formFactor) {
+      const formFactor = typeof part.specifications.formFactor === 'string' 
+        ? part.specifications.formFactor.toLowerCase().replace(' ', '-')
+        : '';
+      const formFactorSpec = (categorySpecs as Record<string, {idle: number; base: number; max: number; efficiency: number}>)[formFactor];
+      if (formFactorSpec) return formFactorSpec;
+    }
+
+    // メモリタイプでのマッチング
+    if (category === 'memory' && part.specifications?.type) {
+      const memType = typeof part.specifications.type === 'string'
+        ? part.specifications.type.toLowerCase()
+        : '';
+      const memSpec = (categorySpecs as Record<string, {idle: number; base: number; max: number; efficiency: number}>)[memType];
+      if (memSpec) return memSpec;
+    }
+
+    // ストレージタイプでのマッチング
+    if (category === 'storage' && part.specifications?.type) {
+      const storageType = typeof part.specifications.type === 'string'
+        ? part.specifications.type.toLowerCase()
+        : '';
+      const storageSpec = (categorySpecs as Record<string, {idle: number; base: number; max: number; efficiency: number}>)[storageType];
+      if (storageSpec) return storageSpec;
+    }
+
+    // デフォルト値を返す
+    return (categorySpecs as Record<string, {idle: number; base: number; max: number; efficiency: number}>).default || { idle: 5, base: 10, max: 20, efficiency: 85 };
   }
 
   // システムオーバーヘッドを計算
-  private calculateSystemOverhead(config: PCConfiguration): {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private calculateSystemOverhead(_config: PCConfiguration): {
     base: number;
     max: number;
     idle: number;
   } {
     // ケースファン、LED、USBデバイス等の追加消費電力
-    const fanCount = 3; // デフォルトファン数
-    const fanPower = 2; // ファン1つあたりの消費電力
-    const usbPower = 5; // USBデバイス用
-    const ledPower = 3; // LED照明用
+    const fanCount = 3; // 推定ファン数
+    const fanPower = 2; // ファン1つあたりの消費電力(W)
+    const usbPower = 5; // USBデバイス用(W)
+    const ledPower = 3; // LED照明用(W)
+    const networkPower = 2; // ネットワーク機能(W)
 
-    const base = (fanCount * fanPower) + usbPower + ledPower;
+    const base = (fanCount * fanPower) + usbPower + ledPower + networkPower;
     const max = base * 1.5;
-    const idle = base * 0.5;
+    const idle = base * 0.4;
 
     return { base, max, idle };
   }
@@ -164,6 +233,8 @@ export class PowerCalculatorService {
     if (consumptions.length === 0) return 85;
 
     const totalPower = consumptions.reduce((sum, c) => sum + c.maxPower, 0);
+    if (totalPower === 0) return 85;
+
     const weightedEfficiency = consumptions.reduce((sum, c) => {
       const weight = c.maxPower / totalPower;
       return sum + (c.powerEfficiency || 85) * weight;
@@ -183,39 +254,71 @@ export class PowerCalculatorService {
 
     if (currentPSU) {
       const psuCapacity = this.extractPSUCapacity(currentPSU);
+      const loadPercentage = (totalMaxPower / psuCapacity) * 100;
       
       if (psuCapacity < totalMaxPower) {
         warnings.push({
-          type: 'insufficient',
+          id: 'insufficient-capacity',
+          type: 'insufficient_capacity',
           severity: 'critical',
           message: `電源容量が不足しています。現在: ${psuCapacity}W, 必要: ${totalMaxPower}W`,
-          affectedParts: [currentPSU.id],
-          recommendation: `${recommendedPSU}W以上の電源に交換してください`
+          value: psuCapacity,
+          threshold: totalMaxPower,
+          suggestion: `${recommendedPSU}W以上の電源に交換してください`
         });
       } else if (psuCapacity < recommendedPSU) {
         warnings.push({
-          type: 'insufficient',
+          id: 'insufficient-margin',
+          type: 'insufficient_headroom',
           severity: 'high',
           message: `電源容量に余裕がありません。安全マージンを考慮してください`,
-          affectedParts: [currentPSU.id],
-          recommendation: `${recommendedPSU}W以上の電源を推奨します`
+          value: psuCapacity,
+          threshold: recommendedPSU,
+          suggestion: `${recommendedPSU}W以上の電源を推奨します`
         });
-      } else if (psuCapacity > recommendedPSU * 1.5) {
+      } else if (loadPercentage > 90) {
         warnings.push({
-          type: 'overkill',
+          id: 'high-load',
+          type: 'high_load_percentage',
+          severity: 'high',
+          message: `電源負荷率が高すぎます (${Math.round(loadPercentage)}%)`,
+          value: loadPercentage,
+          threshold: 90,
+          suggestion: 'より大容量の電源をご検討ください'
+        });
+      } else if (psuCapacity > recommendedPSU * 1.8) {
+        warnings.push({
+          id: 'oversized-psu',
+          type: 'low_efficiency',
           severity: 'low',
-          message: `電源容量が過剰です。電力効率が悪くなる可能性があります`,
-          affectedParts: [currentPSU.id],
-          recommendation: `${recommendedPSU}W程度の電源で十分です`
+          message: `電源容量が過剰です。低負荷時の効率が悪くなる可能性があります`,
+          value: psuCapacity,
+          threshold: recommendedPSU * 1.8,
+          suggestion: `${recommendedPSU}W程度の電源で十分です`
+        });
+      }
+
+      // 効率認証チェック
+      if (!this.hasEfficiencyCertification(currentPSU)) {
+        warnings.push({
+          id: 'no-efficiency-cert',
+          type: 'low_efficiency',
+          severity: 'medium',
+          message: '80+効率認証のない電源が選択されています',
+          value: 0,
+          threshold: 80,
+          suggestion: '80+ Bronze以上の効率認証電源を推奨します'
         });
       }
     } else {
       warnings.push({
-        type: 'insufficient',
+        id: 'no-psu',
+        type: 'insufficient_capacity',
         severity: 'critical',
         message: '電源が選択されていません',
-        affectedParts: [],
-        recommendation: `${recommendedPSU}W以上の電源を選択してください`
+        value: 0,
+        threshold: totalMaxPower,
+        suggestion: `${recommendedPSU}W以上の電源を選択してください`
       });
     }
 
@@ -223,13 +326,15 @@ export class PowerCalculatorService {
     const gpu = config.parts.gpu;
     if (gpu) {
       const gpuPower = this.getPartPowerConsumption(gpu, 'gpu');
-      if (gpuPower && gpuPower.maxPower > 200) {
+      if (gpuPower && gpuPower.maxPower > 300) {
         warnings.push({
-          type: 'efficiency',
+          id: 'high-gpu-power',
+          type: 'high_load_percentage',
           severity: 'medium',
           message: '高性能GPUが選択されています。十分な電源容量と冷却を確保してください',
-          affectedParts: [gpu.id],
-          recommendation: '80+ Gold以上の高効率電源を推奨します'
+          value: gpuPower.maxPower,
+          threshold: 300,
+          suggestion: '80+ Gold以上の高効率電源を推奨します'
         });
       }
     }
@@ -237,21 +342,45 @@ export class PowerCalculatorService {
     return warnings;
   }
 
-  // 電源容量をパーツ名から抽出
+  // 電源容量をパーツから抽出
   private extractPSUCapacity(psu: Part): number {
+    // specifications から取得
+    if (psu.specifications?.capacity) {
+      const capacity = psu.specifications.capacity;
+      if (typeof capacity === 'number') {
+        return capacity;
+      }
+      if (typeof capacity === 'string') {
+        const parsed = parseInt(capacity, 10);
+        if (!isNaN(parsed)) {
+          return parsed;
+        }
+      }
+    }
+
     // パーツ名から容量を抽出（例: "750W Gold電源" -> 750）
     const match = psu.name.match(/(\d+)W/i);
     if (match) {
       return parseInt(match[1]);
     }
 
-    // specifications から取得
-    if (psu.specifications?.capacity) {
-      return psu.specifications.capacity;
-    }
-
     // デフォルト値
     return 500;
+  }
+
+  // 効率認証があるかチェック
+  private hasEfficiencyCertification(psu: Part): boolean {
+    const name = psu.name.toLowerCase();
+    const efficiency = psu.specifications?.efficiency;
+    const efficiencyStr = typeof efficiency === 'string' ? efficiency.toLowerCase() : '';
+    
+    return name.includes('80+') || 
+           name.includes('bronze') ||
+           name.includes('silver') ||
+           name.includes('gold') ||
+           name.includes('platinum') ||
+           name.includes('titanium') ||
+           efficiencyStr.includes('80+');
   }
 
   // 電源設定が最適かどうかを判定
@@ -265,78 +394,98 @@ export class PowerCalculatorService {
 
     const psuCapacity = this.extractPSUCapacity(psu);
     
-    // 容量が適切範囲内か
-    const capacityOptimal = psuCapacity >= recommendedPSU && psuCapacity <= recommendedPSU * 1.3;
+    // 容量が適切範囲内か (推奨容量の1.0~1.4倍)
+    const capacityOptimal = psuCapacity >= recommendedPSU && psuCapacity <= recommendedPSU * 1.4;
     
     // 効率認証があるか
-    const hasEfficiencyCert = psu.name.toLowerCase().includes('80+') || 
-                             psu.name.toLowerCase().includes('bronze') ||
-                             psu.name.toLowerCase().includes('gold') ||
-                             psu.name.toLowerCase().includes('platinum');
+    const hasEfficiencyCert = this.hasEfficiencyCertification(psu);
+    
+    // 負荷率が適切か (50-80%)
+    const loadPercentage = (totalMaxPower / psuCapacity) * 100;
+    const loadOptimal = loadPercentage >= 50 && loadPercentage <= 80;
 
-    return capacityOptimal && hasEfficiencyCert;
+    return capacityOptimal && hasEfficiencyCert && loadOptimal;
   }
 
   // 推奨電源リストを取得
-  public getRecommendedPSUs(requiredCapacity: number): PSUSpecification[] {
-    // 実際の実装では外部データまたは静的データから取得
-    const recommendedPSUs: PSUSpecification[] = [
+  public getRecommendedPSUs(requiredWattage: number): PSUSpecification[] {
+    // 実際のデータベースから取得する代わりに、サンプルデータを返す
+    const baseRecommendations: PSUSpecification[] = [
       {
-        id: 'psu-corsair-rm750x',
-        name: 'Corsair RM750x 750W 80+ Gold',
+        id: 'corsair-rm750x',
+        name: 'Corsair RM750x',
         capacity: 750,
         efficiency: '80+ Gold',
-        efficiencyPercentage: 90,
         modular: true,
-        connectors: [
-          { type: '24pin', count: 1 },
-          { type: '8pin', count: 2 },
-          { type: '6pin', count: 4 },
-          { type: 'sata', count: 8 }
-        ],
-        price: 12000,
-        manufacturer: 'Corsair'
+        price: 15000,
+        efficiencyPercentage: 87,
+        connectors: {
+          motherboard: ['24pin'],
+          cpu: ['4+4pin', '4+4pin'],
+          pcie: ['6+2pin', '6+2pin', '6+2pin', '6+2pin'],
+          sata: 8,
+          molex: 4,
+          floppy: 1
+        }
       },
       {
-        id: 'psu-seasonic-focus-850',
-        name: 'Seasonic Focus GX-850 850W 80+ Gold',
+        id: 'seasonic-focus-gx-850',
+        name: 'Seasonic Focus GX-850',
         capacity: 850,
         efficiency: '80+ Gold',
-        efficiencyPercentage: 90,
         modular: true,
-        connectors: [
-          { type: '24pin', count: 1 },
-          { type: '8pin', count: 2 },
-          { type: '6pin', count: 4 },
-          { type: 'sata', count: 10 }
-        ],
-        price: 15000,
-        manufacturer: 'Seasonic'
+        price: 18000,
+        efficiencyPercentage: 90,
+        connectors: {
+          motherboard: ['24pin'],
+          cpu: ['4+4pin', '4+4pin'],
+          pcie: ['6+2pin', '6+2pin', '6+2pin', '6+2pin'],
+          sata: 8,
+          molex: 4,
+          floppy: 1
+        }
+      },
+      {
+        id: 'evga-supernova-1000',
+        name: 'EVGA SuperNOVA 1000 G5',
+        capacity: 1000,
+        efficiency: '80+ Gold',
+        modular: true,
+        price: 22000,
+        efficiencyPercentage: 88,
+        connectors: {
+          motherboard: ['24pin'],
+          cpu: ['4+4pin', '4+4pin'],
+          pcie: ['6+2pin', '6+2pin', '6+2pin', '6+2pin', '6+2pin'],
+          sata: 10,
+          molex: 4,
+          floppy: 1
+        }
       }
     ];
 
-    return recommendedPSUs.filter(psu => psu.capacity >= requiredCapacity);
+    // 必要な容量以上のPSUのみをフィルタリング
+    return baseRecommendations.filter(psu => psu.capacity >= requiredWattage);
   }
 
   // 月間電気代を計算
   public calculateMonthlyCost(
     powerResult: PowerCalculationResult,
-    usageHours: number = 8,
-    electricityRate: number = 27 // 円/kWh
-  ): {
-    idle: number;
-    normal: number;
-    peak: number;
-  } {
-    const hoursPerMonth = 30 * 24;
-    const idleHours = hoursPerMonth - usageHours * 30;
-    const normalHours = usageHours * 30 * 0.7; // 70%は通常使用
-    const peakHours = usageHours * 30 * 0.3; // 30%はピーク使用
+    usageHours: number,
+    electricityRate: number
+  ): { idle: number; normal: number; peak: number } {
+    const daysInMonth = 30;
+    const idleHours = 24 - usageHours;
+    
+    // kWh単位に変換
+    const idleCost = (powerResult.totalIdlePower / 1000) * idleHours * daysInMonth * electricityRate;
+    const normalCost = (powerResult.totalBasePower / 1000) * usageHours * daysInMonth * electricityRate;
+    const peakCost = (powerResult.totalMaxPower / 1000) * (usageHours * 0.1) * daysInMonth * electricityRate; // ピーク使用は10%程度と仮定
 
     return {
-      idle: (powerResult.totalIdlePower / 1000) * idleHours * electricityRate,
-      normal: (powerResult.totalBasePower / 1000) * normalHours * electricityRate,
-      peak: (powerResult.totalMaxPower / 1000) * peakHours * electricityRate
+      idle: idleCost,
+      normal: normalCost,
+      peak: peakCost
     };
   }
 }

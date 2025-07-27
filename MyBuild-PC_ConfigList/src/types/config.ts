@@ -1,6 +1,42 @@
 // src/types/config.ts
 // PC構成と設定管理用の型定義
 
+import { 
+  CPU, 
+  GPU, 
+  Motherboard, 
+  Memory, 
+  Storage, 
+  PSU, 
+  Case, 
+  CPUCooler, 
+  BasePart,
+  Part,
+  PartCategory 
+} from './parts';
+import { PowerCalculationResult } from './power';
+import { NumberRange, PriceRange } from './search';
+
+// 互換性関連の型（compatibility.tsが完成するまでの仮定義）
+export interface DetailedCompatibilityResult {
+  compatible: boolean;
+  warnings: CompatibilityWarning[];
+  errors: CompatibilityError[];
+  score: number;
+}
+
+export interface CompatibilityWarning {
+  type: string;
+  message: string;
+  severity: 'low' | 'medium' | 'high';
+}
+
+export interface CompatibilityError {
+  type: string;
+  message: string;
+  affectedParts: string[];
+}
+
 export interface PCConfiguration {
   id: string;
   name: string;
@@ -117,41 +153,34 @@ export interface BottleneckAnalysis {
   severity: 'none' | 'minor' | 'moderate' | 'severe';
   component: PartCategory;
   percentage: number;
-  recommendation?: string;
+  recommendation: string;
 }
 
 export interface ThermalEstimate {
-  cpuTemp: TemperatureRange;
-  gpuTemp: TemperatureRange;
-  systemTemp: TemperatureRange;
-  coolingAdequacy: 'excellent' | 'good' | 'adequate' | 'marginal' | 'insufficient';
-  recommendations: ThermalRecommendation[];
+  cpuTemp: NumberRange;
+  gpuTemp: NumberRange;
+  systemTemp: NumberRange;
+  warnings: ThermalWarning[];
 }
 
-export interface TemperatureRange {
-  idle: number;               // °C
-  load: number;               // °C
-  max: number;                // °C
-}
-
-export interface ThermalRecommendation {
-  type: 'cooler_upgrade' | 'case_fans' | 'airflow_optimization' | 'thermal_paste';
+export interface ThermalWarning {
+  component: PartCategory;
+  severity: 'low' | 'medium' | 'high';
   message: string;
-  priority: 'low' | 'medium' | 'high';
+  recommendation: string;
 }
 
 export interface NoiseEstimate {
-  idle: number;               // dB
-  load: number;               // dB
-  components: ComponentNoise[];
-  overall: 'silent' | 'quiet' | 'moderate' | 'loud' | 'very_loud';
+  idleNoise: number;          // dB
+  loadNoise: number;          // dB
+  components: NoiseBreakdown[];
+  rating: 'silent' | 'quiet' | 'moderate' | 'loud';
 }
 
-export interface ComponentNoise {
-  component: string;
-  idle: number;
-  load: number;
-  contribution: number;       // 全体への寄与度（0-1）
+export interface NoiseBreakdown {
+  component: PartCategory;
+  idleNoise: number;
+  loadNoise: number;
 }
 
 export interface UpgradeabilityScore {
@@ -160,58 +189,52 @@ export interface UpgradeabilityScore {
   gpu: number;
   memory: number;
   storage: number;
-  details: UpgradePathAnalysis;
+  suggestions: UpgradeSuggestion[];
 }
 
-export interface UpgradePathAnalysis {
-  cpu: UpgradePath[];
-  gpu: UpgradePath[];
-  memory: UpgradePath[];
-  storage: UpgradePath[];
-}
-
-export interface UpgradePath {
-  component: string;
-  compatibility: boolean;
-  difficulty: 'easy' | 'moderate' | 'difficult';
+export interface UpgradeSuggestion {
+  component: PartCategory;
+  priority: 'low' | 'medium' | 'high';
+  description: string;
   estimatedCost: number;
-  performanceGain: number;    // パーセンテージ
+  performanceGain: number;    // % improvement
 }
 
 export type ConfigurationStatus =
   | 'draft'                   // 下書き
   | 'complete'               // 完成
-  | 'validated'              // 検証済み
-  | 'built'                  // 組み立て済み
-  | 'archived';              // アーカイブ
+  | 'building'               // 組み立て中
+  | 'built'                  // 組み立て完了
+  | 'archived'               // アーカイブ
+  | 'shared'                 // 共有済み
+  | 'published';             // 公開済み
 
-// 構成比較
+// 構成比較機能
 export interface ConfigurationComparison {
   configurations: PCConfiguration[];
-  comparison: ComparisonMatrix;
-  winner: ComparisonWinner;
+  metrics: ComparisonMetrics;
   recommendations: ComparisonRecommendation[];
 }
 
-export interface ComparisonMatrix {
-  price: number[];
-  performance: number[];
-  power: number[];
-  noise: number[];
-  upgradeability: number[];
-  compatibility: number[];
-  buildDifficulty: number[];
+export interface ComparisonMetrics {
+  price: ComparisonValue[];
+  performance: ComparisonValue[];
+  power: ComparisonValue[];
+  noise: ComparisonValue[];
+  upgradeability: ComparisonValue[];
 }
 
-export interface ComparisonWinner {
-  overall: string;            // 構成ID
-  categories: Record<string, string>;
+export interface ComparisonValue {
+  configId: string;
+  value: number;
+  rank: number;
+  percentageDiff?: number;    // 最高値との差
 }
 
 export interface ComparisonRecommendation {
-  type: 'best_value' | 'best_performance' | 'most_upgradeable' | 'quietest' | 'most_compatible';
-  configurationId: string;
-  reason: string;
+  type: 'best_value' | 'best_performance' | 'most_efficient' | 'most_balanced';
+  configId: string;
+  reasoning: string;
   score: number;
 }
 
@@ -222,26 +245,24 @@ export interface ConfigurationTemplate {
   description: string;
   purpose: ConfigurationPurpose;
   budgetRange: PriceRange;
-  partRequirements: PartRequirements;
-  recommendations: TemplateRecommendation[];
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
   popularity: number;
-  lastUpdated: Date;
+  isOfficial: boolean;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  baseConfiguration: Partial<ConfigurationParts>;
+  recommendations: TemplateRecommendation[];
+  variants: TemplateVariant[];
+  tags: string[];
 }
 
-export interface PartRequirements {
-  required: PartCategory[];
-  optional: PartCategory[];
-  priorities: Record<PartCategory, number>; // 予算配分優先度
-  constraints: PartConstraints;
-}
-
-export interface PartConstraints {
-  [category: string]: {
-    minPrice?: number;
-    maxPrice?: number;
-    brands?: string[];
-    specifications?: Record<string, any>;
-  };
+export interface TemplateVariant {
+  name: string;
+  description: string;
+  budgetAdjustment: number;   // 予算調整（%）
+  partAdjustments: Partial<ConfigurationParts>;
+  targetPerformance: string;
 }
 
 export interface TemplateRecommendation {
@@ -249,6 +270,27 @@ export interface TemplateRecommendation {
   parts: string[];            // パーツIDの配列
   reasoning: string;
   alternatives: string[];
+}
+
+export interface TemplateBudgetRules {
+  cpu: PriceRange;
+  gpu: PriceRange;
+  motherboard: PriceRange;
+  memory: PriceRange;
+  storage: PriceRange;
+  psu: PriceRange;
+  case: PriceRange;
+  cooling: PriceRange;
+  other: PriceRange;
+}
+
+export interface BudgetAllocation {
+  category: PartCategory;
+  percentage: number;         // 予算全体に対する割合
+  minPrice: number;
+  maxPrice: number;
+  brands?: string[];
+  specifications?: Record<string, string | number | boolean>; // 修正: any → 適切な型
 }
 
 // 構成エクスポート
@@ -292,7 +334,7 @@ export interface ConfigurationService {
   calculate(config: PCConfiguration): Promise<ConfigurationCalculations>;
   compare(ids: string[]): Promise<ConfigurationComparison>;
   export(id: string, options: ConfigurationExport): Promise<Blob>;
-  import(data: any, format: ExportFormat): Promise<PCConfiguration>;
+  import(data: Record<string, unknown>, format: ExportFormat): Promise<PCConfiguration>; // 修正: any → Record<string, unknown>
   getTemplates(): Promise<ConfigurationTemplate[]>;
   createFromTemplate(templateId: string, budget: number): Promise<PCConfiguration>;
 }

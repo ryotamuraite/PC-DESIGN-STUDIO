@@ -1,21 +1,11 @@
 // src/types/index.ts
-// パーツカテゴリ
-// Phase 2: 拡張型定義
-// 電源計算とデータ取得機能に対応
+// メイン型定義ファイル
+import { PowerCalculationResult } from '@/types';
 
-// Phase 1の既存型定義（継続使用）
-export interface Part {
-  id: string;
-  name: string;
-  category: PartCategory;
-  price: number;
-  manufacturer?: string;
-  specifications?: Record<string, any>;
-  imageUrl?: string;
-  affiliateUrl?: string;
-  lastUpdated?: string;
-}
+// 電力関連型をエクスポート
+export * from './power';
 
+// パーツカテゴリ定義
 export type PartCategory = 
   | 'cpu' 
   | 'gpu' 
@@ -25,108 +15,46 @@ export type PartCategory =
   | 'psu' 
   | 'case' 
   | 'cooler' 
-  | 'monitor';
+  | 'monitor'
+  | 'other';
 
+// 基本パーツ情報
+export interface Part {
+  id: string;
+  name: string;
+  category: PartCategory;
+  price: number;
+  manufacturer: string;
+  specifications: Record<string, string | number | boolean>;
+  availability?: boolean;
+  rating?: number;
+  reviewCount?: number;
+  lastScraped?: string;
+}
+
+// PC構成
 export interface PCConfiguration {
   id: string;
   name: string;
-  parts: Record<PartCategory, Part | null>;
+  parts: Partial<Record<PartCategory, Part>>;
   totalPrice: number;
   budget?: number;
-  createdAt: string;
-  updatedAt: string;
-  notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  description?: string;
+  tags?: string[];
 }
 
-// Phase 2: 電源計算関連の新しい型定義
-
-export interface PowerConsumption {
-  category: PartCategory;
-  partId: string;
-  partName: string;
-  basePower: number;      // 基本消費電力 (W)
-  maxPower: number;       // 最大消費電力 (W)
-  idlePower: number;      // アイドル時消費電力 (W)
-  peakPower?: number;     // ピーク時消費電力 (W)
-  powerEfficiency?: number; // 電力効率 (%)
-}
-
-export interface PowerCalculationResult {
-  totalBasePower: number;     // 基本消費電力合計
-  totalMaxPower: number;      // 最大消費電力合計
-  totalIdlePower: number;     // アイドル時消費電力合計
-  recommendedPSU: number;     // 推奨電源容量
-  safetyMargin: number;       // 安全マージン (%)
-  powerEfficiency: number;    // 全体の電力効率
-  breakdown: PowerConsumption[]; // カテゴリ別内訳
-  warnings: PowerWarning[];   // 警告リスト
-  isOptimal: boolean;         // 最適化されているか
-}
-
-export interface PowerWarning {
-  type: 'insufficient' | 'overkill' | 'efficiency' | 'compatibility';
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  message: string;
-  affectedParts: string[];
-  recommendation?: string;
-}
-
-export interface PSUSpecification {
-  id: string;
-  name: string;
-  capacity: number;           // 容量 (W)
-  efficiency: string;         // 効率認証 (80+ Bronze, Gold, etc.)
-  efficiencyPercentage: number; // 効率 (%)
-  modular: boolean;           // モジュラー対応
-  connectors: PSUConnector[]; // コネクタ情報
-  price: number;
-  manufacturer: string;
-}
-
-export interface PSUConnector {
-  type: '24pin' | '8pin' | '6pin' | '4pin' | 'sata' | 'molex' | 'pcie';
-  count: number;
-  label?: string;
-}
-
-// データ取得・更新関連の型定義
-
-export interface DataSource {
-  id: string;
-  name: string;
-  url: string;
-  type: 'scraping' | 'api' | 'manual';
-  lastUpdated: string;
-  status: 'active' | 'inactive' | 'error';
-  updateFrequency: number; // 更新頻度（時間）
-}
-
+// データ更新関連
 export interface DataUpdateResult {
-  sourceId: string;
+  category: PartCategory;
   success: boolean;
   updatedCount: number;
-  errorCount: number;
   errors: string[];
-  executionTime: number; // ms
-  timestamp: string;
-}
-
-export interface ExternalPartData {
-  sourceId: string;
-  externalId: string;
-  name: string;
-  price: number;
-  url: string;
-  imageUrl?: string;
-  specifications: Record<string, any>;
-  availability: boolean;
-  rating?: number;
-  reviewCount?: number;
-  lastScraped: string;
+  lastUpdate: Date;
 }
 
 // 互換性チェック関連（Phase 2で後実装）
-
 export interface CompatibilityRule {
   id: string;
   name: string;
@@ -152,7 +80,6 @@ export interface CompatibilityWarning {
 }
 
 // 検索・フィルタ関連（Phase 2で後実装）
-
 export interface SearchFilter {
   category?: PartCategory[];
   priceRange?: {min: number; max: number};
@@ -174,7 +101,6 @@ export interface SearchResult {
 }
 
 // ストア状態の型定義
-
 export interface AppState {
   // Phase 1 状態
   currentConfig: PCConfiguration;
@@ -194,9 +120,82 @@ export interface AppState {
 }
 
 // ユーティリティ型
-
 export type PartUpdate = Partial<Part> & {id: string};
 export type ConfigUpdate = Partial<PCConfiguration> & {id: string};
 export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
+
+// Phase 1 で使用されている基本的な設定型
+export interface BudgetSettings {
+  total: number;
+  categories: Partial<Record<PartCategory, number>>;
+  currency: 'JPY' | 'USD' | 'EUR';
+}
+
+export interface UISettings {
+  theme: 'light' | 'dark' | 'auto';
+  language: 'ja' | 'en';
+  compactMode: boolean;
+  showPriceHistory: boolean;
+}
+
+// エラーハンドリング
+export interface AppError {
+  id: string;
+  type: 'validation' | 'network' | 'data' | 'compatibility' | 'power';
+  message: string;
+  details?: Record<string, unknown>;
+  timestamp: Date;
+}
+
+// ローカルストレージ用の設定
+export interface StorageConfig {
+  version: string;
+  configurations: PCConfiguration[];
+  settings: {
+    budget: BudgetSettings;
+    ui: UISettings;
+  };
+  lastBackup?: Date;
+}
+
+// Phase 2 でのデータ取得関連
+export interface ScrapingConfig {
+  sources: {
+    name: string;
+    url: string;
+    enabled: boolean;
+    lastUpdate: Date;
+  }[];
+  updateInterval: number; // 時間単位
+  retryCount: number;
+  timeout: number; // ミリ秒
+}
+
+// 価格履歴追跡
+export interface PriceHistory {
+  partId: string;
+  prices: {
+    price: number;
+    source: string;
+    timestamp: Date;
+  }[];
+  currentPrice: number;
+  lowestPrice: number;
+  averagePrice: number;
+}
+
+// パフォーマンスベンチマーク（将来の拡張用）
+export interface PerformanceBenchmark {
+  category: PartCategory;
+  partId: string;
+  benchmarks: {
+    name: string;
+    score: number;
+    unit: string;
+    source: string;
+  }[];
+  overallScore: number;
+  lastUpdated: Date;
+}

@@ -1,7 +1,7 @@
 // src/App.tsx
 import React, { useState } from 'react';
-import { PowerCalculator } from './components/calculators/PowerCalculator';
-import { PCConfiguration, Part, PartCategory } from './types';
+import PowerCalculator from './components/calculators/PowerCalculator'; // 修正: default import
+import { PCConfiguration, PartCategory } from './types'; // 修正: 未使用のPartを削除
 
 // サンプルデータ（実際にはストアから取得）
 const sampleConfiguration: PCConfiguration = {
@@ -114,14 +114,14 @@ const sampleConfiguration: PCConfiguration = {
   },
   totalPrice: 365000,
   budget: 400000,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  notes: 'ハイエンドゲーミング構成'
+  createdAt: new Date(), // 修正: Date型に変更
+  updatedAt: new Date(), // 修正: Date型に変更
 };
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'builder' | 'power'>('builder');
-  const [configuration, setConfiguration] = useState<PCConfiguration>(sampleConfiguration);
+  // 修正: setConfigurationを削除（未使用のため）
+  const configuration = sampleConfiguration;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -171,8 +171,8 @@ const App: React.FC = () => {
                     </h3>
                     {part ? (
                       <div>
-                        <p className="text-sm text-gray-800">{part.name}</p>
-                        <p className="text-xs text-gray-600">¥{part.price.toLocaleString()}</p>
+                        <p className="text-sm text-gray-800 font-medium">{part.name}</p>
+                        <p className="text-sm text-gray-600">¥{part.price.toLocaleString()}</p>
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500">未選択</p>
@@ -180,18 +180,16 @@ const App: React.FC = () => {
                   </div>
                 ))}
               </div>
-              
+
               {/* 価格サマリー */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-lg font-medium text-gray-900">合計金額</span>
-                  <span className="text-xl font-bold text-gray-900">
-                    ¥{configuration.totalPrice.toLocaleString()}
-                  </span>
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between text-lg font-semibold">
+                  <span>合計価格:</span>
+                  <span className="text-blue-600">¥{configuration.totalPrice.toLocaleString()}</span>
                 </div>
                 {configuration.budget && (
                   <div className="mt-2 flex items-center justify-between text-sm">
-                    <span className="text-gray-600">予算</span>
+                    <span>予算:</span>
                     <span className={
                       configuration.totalPrice > configuration.budget
                         ? 'text-red-600'

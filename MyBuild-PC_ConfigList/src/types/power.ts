@@ -1,43 +1,41 @@
 // src/types/power.ts
 // 電源計算用の型定義
 
-export interface PowerCalculationResult {
-  totalConsumption: number;    // 総消費電力 (W)
-  recommendedPsu: number;      // 推奨電源容量 (W)
-  efficiency: number;          // 効率 (0-1)
-  loadPercentage: number;      // 負荷率 (0-100)
-  headroom: number;           // 余裕 (0-100)
-  breakdown: PowerBreakdown;
-  warnings: PowerWarning[];
-  recommendations: PowerRecommendation[];
-}
+import { PartCategory, Part } from './index';
 
-export interface PowerBreakdown {
-  cpu: PowerConsumption;
-  gpu: PowerConsumption;
-  motherboard: PowerConsumption;
-  memory: PowerConsumption;
-  storage: PowerConsumption[];
-  cooling: PowerConsumption[];
-  other: PowerConsumption;
-  total: PowerConsumption;
+export interface PowerCalculationResult {
+  totalBasePower: number;      // 通常時総消費電力 (W)
+  totalMaxPower: number;       // 最大総消費電力 (W)
+  totalIdlePower: number;      // アイドル時総消費電力 (W)
+  recommendedPSU: number;      // 推奨電源容量 (W)
+  safetyMargin: number;        // 安全マージン (%)
+  powerEfficiency: number;     // 効率 (%)
+  psuLoadPercentage: number;   // PSU負荷率 (%)
+  consumptions: PowerConsumption[];  // コンポーネント別消費電力
+  warnings: PowerWarning[];    // 警告リスト
+  isOptimal: boolean;          // 構成が最適化されているか
 }
 
 export interface PowerConsumption {
-  idle: number;        // アイドル時消費電力 (W)
-  typical: number;     // 通常時消費電力 (W)
-  peak: number;        // ピーク時消費電力 (W)
-  component: string;   // コンポーネント名
+  component: string;           // コンポーネント名
+  category: PartCategory;      // パーツカテゴリ
+  partId: string;             // パーツID
+  partName: string;           // パーツ名
+  idlePower: number;          // アイドル時消費電力 (W)
+  basePower: number;          // 通常時消費電力 (W)
+  maxPower: number;           // 最大消費電力 (W)
+  peakPower?: number;         // ピーク消費電力 (W) - オプショナル
+  powerEfficiency?: number;   // 効率 (%) - オプショナル
 }
 
 export interface PowerWarning {
-  id: string;
-  type: PowerWarningType;
-  severity: 'critical' | 'warning' | 'info';
-  message: string;
-  value: number;
-  threshold: number;
-  suggestion?: string;
+  id: string;                 // 警告の一意ID
+  type: PowerWarningType;     // 警告タイプ
+  severity: 'critical' | 'high' | 'medium' | 'low';  // 重要度
+  message: string;            // 警告メッセージ
+  value: number;              // 現在の値
+  threshold: number;          // 閾値
+  suggestion?: string;        // 改善提案
 }
 
 export type PowerWarningType =
@@ -67,6 +65,27 @@ export interface PowerAlternative {
   efficiency: string;
   price: number;
   improvement: string;
+}
+
+// PSU仕様
+export interface PSUSpecification {
+  id: string;                 // PSU ID
+  name: string;               // 製品名
+  capacity: number;           // 容量 (W)
+  efficiency: string;         // 効率認証 (例: "80+ Gold")
+  efficiencyPercentage: number; // 効率率 (%)
+  modular: boolean;           // モジュラーかどうか
+  price: number;              // 価格
+  connectors: PSUConnectors;  // コネクタ情報
+}
+
+export interface PSUConnectors {
+  motherboard: string[];      // マザーボード用コネクタ
+  cpu: string[];             // CPU用コネクタ
+  pcie: string[];            // PCIe用コネクタ
+  sata: number;              // SATA電源数
+  molex: number;             // Molex電源数
+  floppy: number;            // フロッピー電源数
 }
 
 // 電源効率マップ
