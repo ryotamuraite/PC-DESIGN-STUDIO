@@ -1,5 +1,9 @@
 # MyBuild-PC_ConfigList 開発計画詳細
 ---
+## 概要
+なんかえぇ感じの自作パソコン構成表作成ツール、サイトがなくって、
+だったら自分好みでちゃんと使えるサイト作ろう！と思い立った。
+---
 ## 開発環境の具体的構成
 ---
 ### 基本技術スタック
@@ -77,24 +81,24 @@
 
 ##### 実装内容
 - **新機能:**
-  - PowerCalculator: 消費電力計算
-  - CompatibilityChecker: 互換性検証
-  - DataFetcher: 外部データ取得
-  - SearchFilter: パーツ検索機能
-  - UpdateNotifier: データ更新通知
+  - [ ] PowerCalculator: 消費電力計算
+  - [ ] CompatibilityChecker: 互換性検証
+  - [ ] DataFetcher: 外部データ取得
+  - [ ] SearchFilter: パーツ検索機能
+  - [ ] UpdateNotifier: データ更新通知
 
 - **データ取得戦略**
 - yaml# .github/workflows/update-data.yml
-  - 価格.com商品データのスクレイピング
-  - Amazon Product API連携
-  - 毎日AM 6:00に自動実行
-  - データはJSONファイルとしてリポジトリに保存
+  - [ ] 価格.com商品データのスクレイピング
+  - [ ] Amazon Product API連携
+  - [ ] 毎日AM 6:00に自動実行
+  - [ ] データはJSONファイルとしてリポジトリに保存
 
 ##### 完了基準
-- 自動データ更新の仕組み完成
-- 基本的な互換性チェック機能
-- 電源容量の適切性判定
-- 検索・フィルタ機能
+- [ ] 自動データ更新の仕組み完成
+- [ ] 基本的な互換性チェック機能
+- [ ] 電源容量の適切性判定
+- [ ] 検索・フィルタ機能
 
 ---
 ### Phase 3: UX強化・エクスポート機能 (期間: 2-3週間)
@@ -111,17 +115,17 @@
 
 ##### 実装内容
 - **新機能:**
-  - ExportManager: データエクスポート
-  - ConfigManager: 構成管理
-  - ComparisonTable: 構成比較
-  - ThemeProvider: テーマ切り替え
-  - ErrorBoundary: エラー処理
+  - [ ] ExportManager: データエクスポート
+  - [ ] ConfigManager: 構成管理
+  - [ ] ComparisonTable: 構成比較
+  - [ ] ThemeProvider: テーマ切り替え
+  - [ ] ErrorBoundary: エラー処理
 
 ##### 完了基準
-- 各種形式でのエクスポート対応
-- 直感的なUI/UX
-- 安定したパフォーマンス
-- 包括的なエラーハンドリング
+- [ ] 各種形式でのエクスポート対応
+- [ ] 直感的なUI/UX
+- [ ] 安定したパフォーマンス
+- [ ] 包括的なエラーハンドリング
 
 ---
 ### Phase 4: 収益化・SEO対策 (期間: 2-3週間)
@@ -138,16 +142,16 @@
 
 ##### 実装内容
 - **収益化機能:**
-  - AdBanner: 広告表示コンポーネント
-  - AffiliateLink: アフィリエイトリンク
-  - SEOHead: メタタグ管理
-  - SitemapGenerator: サイトマップ自動生成
+  - [ ] AdBanner: 広告表示コンポーネント
+  - [ ] AffiliateLink: アフィリエイトリンク
+  - [ ] SEOHead: メタタグ管理
+  - [ ] SitemapGenerator: サイトマップ自動生成
 
 ##### 完了基準
-- 広告収益の仕組み完成
-- SEOスコア80点以上
-- ページ速度最適化
-- 収益トラッキング機能
+- [ ] 広告収益の仕組み完成
+- [ ] SEOスコア80点以上
+- [ ] ページ速度最適化
+- [ ] 収益トラッキング機能
 
 ---
 ### Phase 5: コンテンツ拡充・コミュニティ (期間: 継続的)
@@ -163,16 +167,16 @@
 
 ##### 実装内容
 - **コンテンツ戦略:**
-  - /articles: 技術記事・構成例
-  - /reviews: パーツレビュー
-  - /gallery: ユーザー構成ギャラリー
-  - /tools: 関連ツール群
+  - [ ] /articles: 技術記事・構成例
+  - [ ] /reviews: パーツレビュー
+  - [ ] /gallery: ユーザー構成ギャラリー
+  - [ ] /tools: 関連ツール群
 
 ##### 完了基準
-- 月間50記事以上の投稿
-- PWAとしての動作
-- ユーザーエンゲージメント向上
-- コミュニティ形成
+- [ ] 月間50記事以上の投稿
+- [ ] PWAとしての動作
+- [ ] ユーザーエンゲージメント向上
+- [ ] コミュニティ形成
 
 ---
 ## プロジェクト管理
@@ -184,7 +188,7 @@
 - [ ] Week 14~: Phase 5 継続開発
 
 ### 品質管理
-- 各Phase完了時にコードレビュー
-- TypeScript strict modeでの型安全性確保
-- ESLint + Prettierでのコード品質維持
-- GitHub Actionsでの自動テスト
+- [ ] 各Phase完了時にコードレビュー
+- [ ] TypeScript strict modeでの型安全性確保
+- [ ] ESLint + Prettierでのコード品質維持
+- [ ] GitHub Actionsでの自動テスト
