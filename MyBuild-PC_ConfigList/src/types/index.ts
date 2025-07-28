@@ -1,9 +1,10 @@
 // src/types/index.ts
 // メイン型定義ファイル
-import { PowerCalculationResult } from '@/types';
 
 // 電力関連型をエクスポート
 export * from './power';
+// 互換性関連型をエクスポート
+export * from './compatibility';
 
 // パーツカテゴリ定義
 export type PartCategory = 
@@ -25,7 +26,7 @@ export interface Part {
   category: PartCategory;
   price: number;
   manufacturer: string;
-  specifications: Record<string, string | number | boolean>;
+  specifications: Record<string, unknown>; // より柔軟な型定義に変更
   availability?: boolean;
   rating?: number;
   reviewCount?: number;
@@ -108,7 +109,7 @@ export interface AppState {
   budget: number;
   
   // Phase 2 新機能状態
-  powerCalculation: PowerCalculationResult | null;
+  powerCalculation: import('./power').PowerCalculationResult | null;
   dataUpdateStatus: Record<string, DataUpdateResult>;
   searchFilters: SearchFilter;
   searchResults: SearchResult | null;

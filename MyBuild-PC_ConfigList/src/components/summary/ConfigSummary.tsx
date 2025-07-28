@@ -1,128 +1,99 @@
 // src/components/summary/ConfigSummary.tsx
 import React from 'react';
-import { Cpu, Zap, Save, CheckCircle, AlertTriangle, Monitor } from 'lucide-react';
-import { useConfigStore } from '@/hooks/useConfigStore';
-import { categoryNames } from '@/data/sampleParts';
+import { 
+  CheckCircle, 
+  AlertTriangle, 
+  XCircle,
+  Zap,
+  Info,
+  Minus
+} from 'lucide-react';
+import { PCConfiguration } from '@/types';
+import { useCompatibilityCheck } from '@/hooks/useCompatibilityCheck';
 
-const ConfigSummary: React.FC = () => {
-  const { currentConfig, saveConfig } = useConfigStore();
-  
-  const handleSaveConfig = () => {
-    const name = prompt('構成に名前を付けてください:', '新しい構成');
-    if (name) {
-      saveConfig(name);
-      alert('構成を保存しました！');
-    }
-  };
+interface ConfigSummaryProps {
+  configuration: PCConfiguration;
+  className?: string;
+}
 
-  const selectedPartsCount = Object.keys(currentConfig.parts).length;
-  const totalCategories = 5; // 主要カテゴリ数
+export const ConfigSummary: React.FC<ConfigSummaryProps> = ({ 
+  configuration, 
+  className = '' 
+}) => {
+  // 互換性チェック結果を取得
+  const { compatibilityResult, isChecking } = useCompatibilityCheck(configuration);
 
-  // 電源容量チェック
-  const psuWattage = currentConfig.parts.psu?.specs?.wattage || 0;
-  const totalPowerConsumption = currentConfig.totalPowerConsumption;
-  const powerMargin = psuWattage - totalPowerConsumption;
-  const recommendedWattage = totalPowerConsumption * 1.2; // 20%マージン推奨
+  // 電源計算関連（既存のロジック）
+  const totalPowerConsumption = calculateTotalPower(configuration);
+  const psu = configuration.parts.psu;
+  const psuWattage = (psu?.specifications?.wattage as number) || 0;
+  const recommendedWattage = totalPowerConsumption * 1.2; // 20%マージン
   const isPowerAdequate = psuWattage >= recommendedWattage;
   const powerUsagePercentage = psuWattage > 0 ? (totalPowerConsumption / psuWattage) * 100 : 0;
+  const powerMargin = psuWattage - totalPowerConsumption;
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">構成サマリー</h2>
-        <button
-          onClick={handleSaveConfig}
-          disabled={selectedPartsCount === 0}
-          className="flex items-center space-x-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-        >
-          <Save className="w-4 h-4" />
-          <span>保存</span>
-        </button>
-      </div>
-
-      {/* 進捗状況 */}
-      <div className="mb-6">
-        <div className="flex justify-between text-sm text-gray-600 mb-2">
-          <span>構成進捗</span>
-          <span>{selectedPartsCount}/{totalCategories}</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div
-            className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${(selectedPartsCount / totalCategories) * 100}%` }}
-          />
-        </div>
-      </div>
-
-      {/* 選択済みパーツ一覧 */}
-      <div className="space-y-3 mb-6">
-        <h3 className="font-medium text-gray-900 flex items-center gap-2">
-          <Monitor className="w-4 h-4" />
-          選択済みパーツ
-        </h3>
-        
-        {Object.entries(currentConfig.parts).length > 0 ? (
-          <div className="space-y-2">
-            {Object.entries(currentConfig.parts).map(([category, part]) => (
-              <div key={category} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900 text-sm">
-                    {categoryNames[category]}
-                  </p>
-                  <p className="text-xs text-gray-600 truncate">
-                    {part.name}
-                  </p>
-                </div>
-                {/* 消費電力表示（価格は削除） */}
-                {part.powerConsumption && (
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500">
-                      {part.powerConsumption}W
-                    </p>
-                  </div>
-                )}
-              </div>
-            ))}
+    <div className={`bg-white rounded-lg shadow-sm border p-6 ${className}`}>
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">構成サマリー</h2>
+      
+      <div className="space-y-6">
+        {/* 価格情報 */}
+        <div className="bg-blue-50 rounded-md p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            <span className="font-medium text-sm">価格情報</span>
           </div>
-        ) : (
-          <p className="text-gray-500 text-center py-4">
-            パーツが選択されていません
-          </p>
-        )}
-      </div>
-
-      {/* 技術仕様サマリー */}
-      <div className="border-t pt-4 space-y-4">
-        <h3 className="font-medium text-gray-900 flex items-center gap-2">
-          <Cpu className="w-4 h-4" />
-          技術仕様
-        </h3>
-
-        {/* 消費電力サマリー */}
-        <div className="bg-gray-50 rounded-md p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center space-x-2">
-              <Zap className="w-4 h-4 text-yellow-600" />
-              <span className="font-medium text-sm">消費電力</span>
+          
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>合計価格:</span>
+              <span className="font-semibold">¥{(configuration.totalPrice || 0).toLocaleString()}</span>
             </div>
-            <span className="text-lg font-semibold text-gray-900">
-              {totalPowerConsumption}W
-            </span>
-          </div>
-
-          {/* 電源容量チェック */}
-          {currentConfig.parts.psu && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>電源容量: {psuWattage}W</span>
-                <span>使用率: {powerUsagePercentage.toFixed(1)}%</span>
+            
+            {configuration.budget && (
+              <div className="flex justify-between">
+                <span>予算:</span>
+                <span className={
+                  (configuration.totalPrice || 0) > configuration.budget ? 
+                    'text-red-600 font-semibold' : 'text-green-600'
+                }>
+                  ¥{configuration.budget.toLocaleString()}
+                  {(configuration.totalPrice || 0) > configuration.budget && (
+                    <span className="ml-2 text-red-600">
+                      (¥{((configuration.totalPrice || 0) - configuration.budget).toLocaleString()} オーバー)
+                    </span>
+                  )}
+                </span>
               </div>
-              
-              {/* プログレスバー */}
+            )}
+          </div>
+        </div>
+
+        {/* 電力計算情報 */}
+        <div className="bg-yellow-50 rounded-md p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Zap className="w-4 h-4 text-yellow-600" />
+            <span className="font-medium text-sm">電力情報</span>
+          </div>
+          
+          {psu ? (
+            <div className="space-y-3">
+              <div className="text-sm">
+                <div className="flex justify-between mb-1">
+                  <span>消費電力:</span>
+                  <span>{totalPowerConsumption}W</span>
+                </div>
+                <div className="flex justify-between mb-2">
+                  <span>電源容量:</span>
+                  <span>{psuWattage}W</span>
+                </div>
+              </div>
+
+              {/* 電力使用率バー */}
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    powerUsagePercentage > 80 ? 'bg-red-500' : 
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    powerUsagePercentage > 85 ? 'bg-red-500' : 
                     powerUsagePercentage > 60 ? 'bg-yellow-500' : 'bg-green-500'
                   }`}
                   style={{ width: `${Math.min(powerUsagePercentage, 100)}%` }}
@@ -146,38 +117,232 @@ const ConfigSummary: React.FC = () => {
                 </span>
               </div>
             </div>
+          ) : (
+            <p className="text-sm text-gray-600">電源ユニットを選択してください</p>
           )}
         </div>
 
-        {/* 互換性チェック（今後拡張予定） */}
+        {/* 互換性チェック */}
         <div className="bg-gray-50 rounded-md p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle className="w-4 h-4 text-green-500" />
+          <div className="flex items-center gap-2 mb-3">
+            {isChecking ? (
+              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            ) : compatibilityResult?.isCompatible ? (
+              <CheckCircle className="w-4 h-4 text-green-500" />
+            ) : compatibilityResult && !compatibilityResult.isCompatible ? (
+              <XCircle className="w-4 h-4 text-red-500" />
+            ) : (
+              <Info className="w-4 h-4 text-gray-400" />
+            )}
             <span className="font-medium text-sm">互換性チェック</span>
+            {compatibilityResult && (
+              <span className={`text-xs px-2 py-1 rounded ${
+                compatibilityResult.score >= 90 ? 'bg-green-100 text-green-700' :
+                compatibilityResult.score >= 70 ? 'bg-yellow-100 text-yellow-700' :
+                'bg-red-100 text-red-700'
+              }`}>
+                {compatibilityResult.score}点
+              </span>
+            )}
           </div>
           
-          <div className="space-y-1 text-sm text-gray-600">
-            {/* TODO: Phase 2で実装予定の互換性チェック */}
-            <div className="flex justify-between">
-              <span>CPUソケット:</span>
-              <span className="text-gray-400">チェック中...</span>
+          {isChecking ? (
+            <p className="text-sm text-gray-600">互換性をチェック中...</p>
+          ) : compatibilityResult ? (
+            <div className="space-y-2">
+              {/* 互換性ステータス */}
+              <div className={`text-sm font-medium ${
+                compatibilityResult.isCompatible ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {compatibilityResult.isCompatible ? 
+                  '✓ 互換性に問題はありません' : 
+                  '⚠ 互換性に問題があります'
+                }
+              </div>
+
+              {/* 詳細情報 */}
+              <div className="space-y-1 text-sm text-gray-600">
+                <CompatibilityItem
+                  label="CPUソケット"
+                  status={compatibilityResult.details.cpuSocket.compatible}
+                  message={compatibilityResult.details.cpuSocket.message}
+                  configuration={configuration}
+                />
+                <CompatibilityItem
+                  label="メモリ規格"
+                  status={compatibilityResult.details.memoryType.compatible}
+                  message={compatibilityResult.details.memoryType.message}
+                  configuration={configuration}
+                />
+                <CompatibilityItem
+                  label="電源コネクタ"
+                  status={compatibilityResult.details.powerConnectors.compatible}
+                  message={compatibilityResult.details.powerConnectors.message}
+                  configuration={configuration}
+                />
+                <CompatibilityItem
+                  label="ケースサイズ"
+                  status={compatibilityResult.details.physicalFit.compatible}
+                  message={compatibilityResult.details.physicalFit.message}
+                  configuration={configuration}
+                />
+                <CompatibilityItem
+                  label="性能バランス"
+                  status={compatibilityResult.details.performanceMatch.balanced}
+                  message={compatibilityResult.details.performanceMatch.message}
+                  configuration={configuration}
+                />
+              </div>
+
+              {/* 重要な問題がある場合の警告 */}
+              {!compatibilityResult.isCompatible && (
+                <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-sm">
+                  <div className="font-medium text-red-800 mb-1">
+                    {compatibilityResult.issues.filter(i => i.severity === 'critical').length}件の重要な問題
+                  </div>
+                  {compatibilityResult.issues
+                    .filter(issue => issue.severity === 'critical')
+                    .slice(0, 2)
+                    .map((issue, index) => (
+                      <div key={index} className="text-red-700">
+                        • {issue.message}
+                      </div>
+                    ))
+                  }
+                  {compatibilityResult.issues.filter(i => i.severity === 'critical').length > 2 && (
+                    <div className="text-red-600 mt-1 text-xs">
+                      他 {compatibilityResult.issues.filter(i => i.severity === 'critical').length - 2}件...
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            <div className="flex justify-between">
-              <span>メモリ規格:</span>
-              <span className="text-gray-400">チェック中...</span>
+          ) : (
+            <div className="space-y-1 text-sm text-gray-600">
+              <div className="flex justify-between">
+                <span>CPUソケット:</span>
+                <span className="text-gray-400">パーツ選択中...</span>
+              </div>
+              <div className="flex justify-between">
+                <span>メモリ規格:</span>
+                <span className="text-gray-400">パーツ選択中...</span>
+              </div>
+              <div className="flex justify-between">
+                <span>ケースサイズ:</span>
+                <span className="text-gray-400">パーツ選択中...</span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span>ケースサイズ:</span>
-              <span className="text-gray-400">チェック中...</span>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              ※ 詳細な互換性チェック機能はPhase 2で実装予定です
-            </p>
-          </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
+
+// 互換性項目表示コンポーネント
+const CompatibilityItem: React.FC<{
+  label: string;
+  status: boolean;
+  message: string;
+  configuration: PCConfiguration;
+}> = ({ label, status, message, configuration }) => {
+  // 未選択状態のチェック
+  const isPending = message.includes('待っています');
+  
+  // 実際に不足しているパーツの取得
+  const getMissingParts = (label: string, config: PCConfiguration): string => {
+    const missingParts: string[] = [];
+    
+    switch (label) {
+      case 'CPUソケット':
+        if (!config.parts.cpu) missingParts.push('CPU');
+        if (!config.parts.motherboard) missingParts.push('マザーボード');
+        break;
+      case 'メモリ規格':
+        if (!config.parts.memory) missingParts.push('メモリ');
+        if (!config.parts.motherboard) missingParts.push('マザーボード');
+        break;
+      case '電源コネクタ':
+        if (!config.parts.psu) missingParts.push('電源ユニット');
+        break;
+      case 'ケースサイズ':
+        if (!config.parts.case) missingParts.push('PCケース');
+        break;
+      case '性能バランス':
+        if (!config.parts.cpu) missingParts.push('CPU');
+        if (!config.parts.gpu) missingParts.push('GPU');
+        break;
+    }
+    
+    if (missingParts.length === 0) return '';
+    if (missingParts.length === 1) return `${missingParts[0]}が必要`;
+    return `${missingParts.join('、')}が必要`;
+  };
+  
+  return (
+    <div className="flex justify-between items-center">
+      <span>{label}:</span>
+      <div className="flex items-center gap-1">
+        {isPending ? (
+          <>
+            <Minus className="w-3 h-3 text-gray-400" />
+            <div className="text-right">
+              <div className="text-xs text-gray-500">未選択</div>
+              {getMissingParts(label, configuration) && (
+                <div className="text-xs text-gray-400 mt-0.5">
+                  ({getMissingParts(label, configuration)})
+                </div>
+              )}
+            </div>
+          </>
+        ) : status ? (
+          <>
+            <CheckCircle className="w-3 h-3 text-green-500" />
+            <span className="text-xs text-green-600">互換</span>
+          </>
+        ) : (
+          <>
+            <XCircle className="w-3 h-3 text-red-500" />
+            <span className="text-xs text-red-600">非互換</span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// 簡易電力計算関数（既存のロジック）
+function calculateTotalPower(configuration: PCConfiguration): number {
+  let totalPower = 0;
+  
+  Object.values(configuration.parts).forEach(part => {
+    if (part) {
+      // 各パーツの消費電力を取得（specifications.powerまたはtdp）
+      const power = (part.specifications?.power as number) || 
+                   (part.specifications?.tdp as number) || 
+                   getDefaultPowerConsumption(part.category);
+      totalPower += power;
+    }
+  });
+  
+  return totalPower;
+}
+
+// パーツカテゴリ別のデフォルト消費電力
+function getDefaultPowerConsumption(category: string): number {
+  const defaults: Record<string, number> = {
+    cpu: 100,
+    gpu: 200,
+    motherboard: 50,
+    memory: 10,
+    storage: 15,
+    psu: 0, // 電源自体は消費電力に含めない
+    case: 20, // ファン等
+    cooler: 15,
+    monitor: 0 // 外部デバイス
+  };
+  
+  return defaults[category] || 20;
+}
 
 export default ConfigSummary;

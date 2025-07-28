@@ -1,7 +1,28 @@
 // src/types/power.ts
 // 電源計算用の型定義
 
-import { PartCategory, Part } from './index';
+// パーツカテゴリの型を再定義（循環インポートを回避）
+export type PartCategory = 
+  | 'cpu' 
+  | 'gpu' 
+  | 'motherboard' 
+  | 'memory' 
+  | 'storage' 
+  | 'psu' 
+  | 'case' 
+  | 'cooler' 
+  | 'monitor'
+  | 'other';
+
+// パーツの基本型（循環インポートを回避）
+export interface Part {
+  id: string;
+  name: string;
+  category: PartCategory;
+  price: number;
+  manufacturer: string;
+  specifications: Record<string, unknown>;
+}
 
 export interface PowerCalculationResult {
   totalBasePower: number;      // 通常時総消費電力 (W)
