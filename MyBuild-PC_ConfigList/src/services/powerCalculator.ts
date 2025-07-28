@@ -1,13 +1,11 @@
 // src/services/powerCalculator.ts
+import { Part, PartCategory, PCConfiguration } from '@/types';
 import { 
-  Part, 
-  PartCategory, 
-  PCConfiguration, 
   PowerCalculationResult, 
   PowerWarning,
   PowerConsumption,
   PSUSpecification
-} from '@/types';
+} from '@/types/power';
 
 // デフォルト電力仕様データ（後でJSONファイルから読み込み予定）
 const DEFAULT_POWER_SPECS = {

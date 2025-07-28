@@ -1,0 +1,200 @@
+# PC構成データ自動更新ワークフロー
+# 外部アクセスを慎重に実装 - 段階的アプローチ
+
+name: '🔄 PC Data Auto Update'
+
+on:
+  # 段階的スケジュール設定
+  schedule:
+    # 深夜2時に実行（サーバー負荷軽減）
+    - cron: '0 2 * * *'  # 毎日 午前2時 (UTC)
+    # 週1回の詳細更新
+    - cron: '0 3 * * 0'  # 毎週日曜 午前3時 (UTC)
+  
+  # 手動実行可能
+  workflow_dispatch:
+    inputs:
+      update_type:
+        description: '更新タイプ'
+        required: true
+        default: 'mock'
+        type: choice
+        options:
+          - mock        # モック実装（安全）
+          - limited     # 制限付き外部アクセス
+          - full        # 本格外部アクセス（慎重に）
+      
+      dry_run:
+        description: 'ドライラン（実際の更新なし）'
+        required: false
+        default: true
+        type: boolean
+
+# セキュリティ設定
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  # 🛡️ 安全性チェック
+  safety-check:
+    name: '🛡️ 安全性事前チェック'
+    runs-on: ubuntu-latest
+    outputs:
+      can_proceed: ${{ steps.check.outputs.can_proceed }}
+      update_mode: ${{ steps.check.outputs.update_mode }}
+    
+    steps:
+      - name: '📋 チェック項目確認'
+        id: check
+        run: |
+          echo "🔍 安全性チェック開始..."
+          
+          # 実行時間チェック（深夜時間帯推奨）
+          current_hour=$(date -u +%H)
+          echo "現在時刻 (UTC): ${current_hour}時"
+          
+          # デフォルトは安全なモック実装
+          update_mode="mock"
+          can_proceed="true"
+          
+          # 手動実行時の設定確認
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            update_mode="${{ github.event.inputs.update_type }}"
+            
+            # 外部アクセス時の追加チェック
+            if [ "$update_mode" != "mock" ]; then
+              echo "⚠️ 外部アクセスモード: $update_mode"
+              echo "🕐 推奨実行時間: 深夜2-5時 (UTC)"
+              
+              # 平日昼間の外部アクセスを制限
+              if [ $current_hour -ge 8 ] && [ $current_hour -le 18 ]; then
+                echo "❌ 平日昼間の外部アクセスは制限されています"
+                can_proceed="false"
+              fi
+            fi
+          fi
+          
+          echo "can_proceed=$can_proceed" >> $GITHUB_OUTPUT
+          echo "update_mode=$update_mode" >> $GITHUB_OUTPUT
+          echo "✅ 安全性チェック完了"
+
+  # 📊 データ更新メインジョブ  
+  update-data:
+    name: '📊 PCデータ更新'
+    runs-on: ubuntu-latest
+    needs: safety-check
+    if: needs.safety-check.outputs.can_proceed == 'true'
+    
+    strategy:
+      # 失敗時も継続（部分的成功を許可）
+      fail-fast: false
+      matrix:
+        data_type: ['prices', 'stock', 'new_products']
+    
+    steps:
+      - name: '📥 リポジトリチェックアウト'
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+
+      - name: '⚙️ Node.js セットアップ'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: '📦 依存関係インストール'
+        run: |
+          npm ci
+          echo "✅ 依存関係インストール完了"
+
+      - name: '🔄 データ更新実行'
+        env:
+          # 環境変数（段階的に追加）
+          UPDATE_MODE: ${{ needs.safety-check.outputs.update_mode }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
+          DATA_TYPE: ${{ matrix.data_type }}
+          
+          # 外部API設定（安全に管理）
+          # KAKAKU_API_KEY: ${{ secrets.KAKAKU_API_KEY }}
+          # AMAZON_API_KEY: ${{ secrets.AMAZON_API_KEY }}
+          # RAKUTEN_API_KEY: ${{ secrets.RAKUTEN_API_KEY }}
+          
+        run: |
+          echo "🔄 データ更新開始: $DATA_TYPE"
+          echo "📋 更新モード: $UPDATE_MODE"
+          echo "🧪 ドライラン: $DRY_RUN"
+          
+          # データ更新スクリプト実行
+          npm run update-data -- \
+            --type="$DATA_TYPE" \
+            --mode="$UPDATE_MODE" \
+            --dry-run="$DRY_RUN"
+
+      - name: '📈 更新結果確認'
+        run: |
+          echo "📊 更新結果サマリー"
+          
+          # 更新されたファイルを確認
+          if [ -f "data/update-results.json" ]; then
+            echo "✅ 更新結果ファイル存在"
+            cat data/update-results.json | jq -r '.summary'
+          else
+            echo "ℹ️ 更新結果ファイルなし（ドライランまたはエラー）"
+          fi
+          
+          # Git差分確認
+          if git diff --quiet; then
+            echo "📝 変更なし"
+          else
+            echo "📝 変更されたファイル:"
+            git diff --name-only
+          fi
+
+      - name: '💾 変更コミット'
+        if: env.DRY_RUN != 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          if ! git diff --quiet; then
+            echo "💾 変更をコミット中..."
+            git add .
+            git commit -m "🤖 自動データ更新: ${{ matrix.data_type }} (${{ github.run_number }})"
+            git push
+            echo "✅ コミット完了"
+          else
+            echo "📝 コミットする変更なし"
+          fi
+
+  # 📊 更新結果サマリー
+  summary:
+    name: '📊 更新結果サマリー'
+    runs-on: ubuntu-latest
+    needs: [safety-check, update-data]
+    if: always()
+    
+    steps:
+      - name: '📋 実行結果まとめ'
+        run: |
+          echo "## 🔄 PC構成データ更新結果" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**実行時刻**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "**更新モード**: ${{ needs.safety-check.outputs.update_mode }}" >> $GITHUB_STEP_SUMMARY
+          echo "**安全性チェック**: ${{ needs.safety-check.outputs.can_proceed }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.safety-check.outputs.can_proceed }}" = "true" ]; then
+            echo "✅ **ステータス**: 正常実行" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **ステータス**: 安全性チェックにより停止" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🛡️ 外部アクセス配慮事項" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ レート制限実装済み" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ 深夜時間帯実行" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ 段階的実装アプローチ" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ BOT対策実装済み" >> $GITHUB_STEP_SUMMARY

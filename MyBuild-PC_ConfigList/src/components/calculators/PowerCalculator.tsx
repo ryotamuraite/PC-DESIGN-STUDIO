@@ -6,7 +6,8 @@ import {
   usePSURecommendation,
   usePowerWarningsByPriority 
 } from '@/hooks/usePowerCalculation';
-import { PCConfiguration, PowerWarning, PowerConsumption, PSUSpecification } from '@/types';
+import { PCConfiguration } from '@/types';
+import { PowerWarning, PowerConsumption, PSUSpecification } from '@/types/power';
 
 interface PowerCalculatorProps {
   configuration: PCConfiguration;

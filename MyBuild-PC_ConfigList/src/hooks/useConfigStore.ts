@@ -9,7 +9,7 @@ const initialConfig: PCConfig = {
   budget: 200000,
   parts: {},
   totalPrice: 0,
-  totalPowerConsumption: 0,
+  totalPowerConsumption: 0, // 初期化を追加
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -39,7 +39,14 @@ export const useConfigStore = create<ConfigStore>()(
             0
           );
           const totalPowerConsumption = Object.values(newParts).reduce(
-            (sum, p) => sum + (p?.powerConsumption || 0),
+            (sum, p) => {
+              if (!p) return sum;
+              // specifications.power または specifications.tdp から電力消費量を取得
+              const power = (p.specifications?.power as number) || 
+                           (p.specifications?.tdp as number) || 
+                           0;
+              return sum + power;
+            },
             0
           );
 
@@ -64,7 +71,14 @@ export const useConfigStore = create<ConfigStore>()(
             0
           );
           const totalPowerConsumption = Object.values(newParts).reduce(
-            (sum, p) => sum + (p?.powerConsumption || 0),
+            (sum, p) => {
+              if (!p) return sum;
+              // specifications.power または specifications.tdp から電力消費量を取得
+              const power = (p.specifications?.power as number) || 
+                           (p.specifications?.tdp as number) || 
+                           0;
+              return sum + power;
+            },
             0
           );
 

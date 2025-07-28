@@ -1,28 +1,7 @@
 // src/types/power.ts
-// 電源計算用の型定義
+// 電源計算用の型定義 - 循環インポート解決版
 
-// パーツカテゴリの型を再定義（循環インポートを回避）
-export type PartCategory = 
-  | 'cpu' 
-  | 'gpu' 
-  | 'motherboard' 
-  | 'memory' 
-  | 'storage' 
-  | 'psu' 
-  | 'case' 
-  | 'cooler' 
-  | 'monitor'
-  | 'other';
-
-// パーツの基本型（循環インポートを回避）
-export interface Part {
-  id: string;
-  name: string;
-  category: PartCategory;
-  price: number;
-  manufacturer: string;
-  specifications: Record<string, unknown>;
-}
+// PartCategory と Part は index.ts から使用
 
 export interface PowerCalculationResult {
   totalBasePower: number;      // 通常時総消費電力 (W)
@@ -39,7 +18,7 @@ export interface PowerCalculationResult {
 
 export interface PowerConsumption {
   component: string;           // コンポーネント名
-  category: PartCategory;      // パーツカテゴリ
+  category: string;            // パーツカテゴリ（stringで統一）
   partId: string;             // パーツID
   partName: string;           // パーツ名
   idlePower: number;          // アイドル時消費電力 (W)
@@ -67,27 +46,6 @@ export type PowerWarningType =
   | 'connector_shortage'       // コネクタ不足
   | 'future_upgrade_limited';  // 将来のアップグレード制限
 
-export interface PowerRecommendation {
-  id: string;
-  type: 'psu_upgrade' | 'component_alternative' | 'configuration';
-  priority: 'high' | 'medium' | 'low';
-  title: string;
-  description: string;
-  currentValue: number;
-  recommendedValue: number;
-  alternatives?: PowerAlternative[];
-  estimatedCost?: number;
-}
-
-export interface PowerAlternative {
-  partId: string;
-  name: string;
-  wattage: number;
-  efficiency: string;
-  price: number;
-  improvement: string;
-}
-
 // PSU仕様
 export interface PSUSpecification {
   id: string;                 // PSU ID
@@ -109,6 +67,27 @@ export interface PSUConnectors {
   floppy: number;            // フロッピー電源数
 }
 
+export interface PowerRecommendation {
+  id: string;
+  type: 'psu_upgrade' | 'component_alternative' | 'configuration';
+  priority: 'high' | 'medium' | 'low';
+  title: string;
+  description: string;
+  currentValue: number;
+  recommendedValue: number;
+  alternatives?: PowerAlternative[];
+  estimatedCost?: number;
+}
+
+export interface PowerAlternative {
+  partId: string;
+  name: string;
+  wattage: number;
+  efficiency: string;
+  price: number;
+  improvement: string;
+}
+
 // 電源効率マップ
 export const PSU_EFFICIENCY_MAP = {
   '80+': 0.80,
@@ -125,15 +104,6 @@ export interface EfficiencyCurve {
   load50: number;  // 50%負荷時の効率
   load80: number;  // 80%負荷時の効率
   load100: number; // 100%負荷時の効率
-}
-
-// TDP別消費電力データ
-export interface TDPData {
-  component: string;
-  tdp: number;
-  idleMultiplier: number;     // アイドル時のTDPに対する比率
-  typicalMultiplier: number;  // 通常時のTDPに対する比率
-  peakMultiplier: number;     // ピーク時のTDPに対する比率
 }
 
 // システム負荷シナリオ
@@ -192,39 +162,7 @@ export interface PowerCalculationConfig {
   peripheralsPower: number;     // 周辺機器の消費電力
 }
 
-// デフォルト消費電力データ
-export interface DefaultPowerData {
-  motherboard: {
-    atx: number;
-    microATX: number;
-    miniITX: number;
-  };
-  memory: {
-    ddr4: number;    // スティック1本あたり
-    ddr5: number;
-  };
-  storage: {
-    ssd25: number;
-    hdd35: number;
-    nvme: number;
-  };
-  cooling: {
-    airCooler: number;
-    aio120: number;
-    aio240: number;
-    aio280: number;
-    aio360: number;
-    caseFan120: number;
-    caseFan140: number;
-  };
-  other: {
-    usb: number;        // USBデバイス1つあたり
-    rgb: number;        // RGBライティング
-    networking: number; // ネットワークカード
-  };
-}
-
-// 電源コネクタ要件チェック
+// 電力コネクタ要件チェック
 export interface PowerConnectorCheck {
   required: PowerConnectorRequirements;
   available: PowerConnectorAvailable;
@@ -247,19 +185,4 @@ export interface PowerConnectorAvailable {
   sata: number;
   molex: number;
   floppy: number;
-}
-
-// 電源計算ユーティリティ関数の型
-export type PowerCalculator = (
-  parts: Partial<Record<PartCategory, Part | Part[]>>,
-  config?: PowerCalculationConfig
-) => Promise<PowerCalculationResult>;
-
-// 電源データベース
-export interface PowerDatabase {
-  tdpData: Record<string, TDPData>;
-  defaultPowerData: DefaultPowerData;
-  efficiencyCurves: Record<string, EfficiencyCurve>;
-  lastUpdated: Date;
-  version: string;
 }

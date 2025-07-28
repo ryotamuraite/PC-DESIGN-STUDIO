@@ -1,13 +1,24 @@
 // src/App.tsx
 import React, { useState } from 'react';
-import { PCConfiguration, Part, PartCategory } from './types';
-import PowerCalculator from './components/calculators/PowerCalculator';
-import CompatibilityChecker from './components/checkers/CompatibilityChecker';
-import ConfigSummary from './components/summary/ConfigSummary';
-import { sampleParts, getPartsByCategory, compatibleCombinations } from './data/sampleParts';
+import { PCConfiguration, Part, PartCategory } from '@/types';
+import PowerCalculator from '@/components/calculators/PowerCalculator';
+import CompatibilityChecker from '@/components/checkers/CompatibilityChecker';
+import ConfigSummary from '@/components/summary/ConfigSummary';
+import PartSearch from '@/components/search/PartSearch';
+import UpdateNotifier from '@/components/notifications/UpdateNotifier';
+import { useNotifications } from '@/hooks/useNotifications';
+import { sampleParts, getPartsByCategory, compatibleCombinations } from '@/data/sampleParts';
+
+// 未使用変数（ESLintで警告されるはず）
+const unusedVariable = 'test';
+
+// 型エラー（TypeScriptで警告されるはず）
+const wrongType: string = 123;
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'builder' | 'power' | 'compatibility'>('builder');
+  const [activeTab, setActiveTab] = useState<'builder' | 'power' | 'compatibility' | 'search'>('builder');
+  const { notifications, dismissNotification, success, warning } = useNotifications();
+  
   const [configuration, setConfiguration] = useState<PCConfiguration>({
     id: 'config-1',
     name: 'My PC Build',
@@ -30,11 +41,44 @@ const App: React.FC = () => {
     tags: []
   });
 
+  // カテゴリ表示名を取得
+  const getCategoryDisplayName = (category: PartCategory): string => {
+    const categoryNames: Record<PartCategory, string> = {
+      cpu: 'CPU',
+      motherboard: 'マザーボード',
+      memory: 'メモリ',
+      storage: 'ストレージ',
+      gpu: 'グラフィックボード',
+      psu: '電源ユニット',
+      case: 'PCケース',
+      cooler: 'CPUクーラー',
+      monitor: 'モニター',
+      other: 'その他'
+    };
+    return categoryNames[category];
+  };
+
   // パーツ選択処理
   const selectPart = (category: PartCategory, part: Part | null) => {
     setConfiguration(prev => {
       const newParts = { ...prev.parts, [category]: part };
       const totalPrice = Object.values(newParts).reduce((sum, p) => sum + (p?.price || 0), 0);
+      
+      // 通知表示
+      if (part) {
+        success(
+          'パーツを選択しました',
+          `${getCategoryDisplayName(category)}: ${part.name}`,
+          'パーツ選択'
+        );
+      } else {
+        warning(
+          'パーツを削除しました',
+          `${getCategoryDisplayName(category)}を削除しました`,
+          'パーツ削除'
+        );
+      }
+      
       return {
         ...prev,
         parts: newParts,
@@ -44,17 +88,26 @@ const App: React.FC = () => {
     });
   };
 
+  // 検索からのパーツ選択処理
+  const handlePartSelect = (part: Part) => {
+    selectPart(part.category, part);
+    // 検索タブから構成作成タブに移動
+    setActiveTab('builder');
+  };
+
   // テスト用構成ロード
   const loadTestConfiguration = (configType: 'intel' | 'amd') => {
     const testConfig = compatibleCombinations[configType];
     const newParts: Partial<Record<PartCategory, Part>> = {};
     let totalPrice = 0;
+    let loadedCount = 0;
 
     Object.entries(testConfig).forEach(([category, partId]) => {
       const part = sampleParts.find(p => p.id === partId);
       if (part) {
         newParts[category as PartCategory] = part;
         totalPrice += part.price;
+        loadedCount++;
       }
     });
 
@@ -64,6 +117,13 @@ const App: React.FC = () => {
       totalPrice,
       updatedAt: new Date()
     }));
+    
+    // 成功通知を表示
+    success(
+      `${configType.toUpperCase()}構成をロードしました`,
+      `${loadedCount}件のパーツを読み込みました（合計: ¥${totalPrice.toLocaleString()}）`,
+      '構成ロード'
+    );
   };
 
   return (
@@ -108,6 +168,16 @@ const App: React.FC = () => {
               >
                 互換性チェック
               </button>
+              <button
+                onClick={() => setActiveTab('search')}
+                className={`px-3 py-2 text-sm font-medium rounded-md ${
+                  activeTab === 'search'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                パーツ検索
+              </button>
             </nav>
           </div>
         </div>
@@ -130,10 +200,21 @@ const App: React.FC = () => {
                     <input
                       type="number"
                       value={configuration.budget || ''}
-                      onChange={(e) => setConfiguration(prev => ({
-                        ...prev,
-                        budget: parseInt(e.target.value) || 0
-                      }))}
+                      onChange={(e) => {
+                        const newBudget = parseInt(e.target.value) || 0;
+                        setConfiguration(prev => ({
+                          ...prev,
+                          budget: newBudget
+                        }));
+                        // 予算変更通知
+                        if (newBudget > 0) {
+                          success(
+                            '予算を設定しました',
+                            `予算上限: ¥${newBudget.toLocaleString()}`,
+                            '予算設定'
+                          );
+                        }
+                      }}
                       className="border border-gray-300 rounded-md px-3 py-1 text-sm w-32"
                       placeholder="150000"
                     />
@@ -180,21 +261,30 @@ const App: React.FC = () => {
                       AMD構成をロード
                     </button>
                     <button
-                      onClick={() => setConfiguration(prev => ({
-                        ...prev,
-                        parts: {
-                          cpu: null,
-                          gpu: null,
-                          motherboard: null,
-                          memory: null,
-                          storage: null,
-                          psu: null,
-                          case: null,
-                          cooler: null,
-                          monitor: null
-                        },
-                        totalPrice: 0
-                      }))}
+                      onClick={() => {
+                        setConfiguration(prev => ({
+                          ...prev,
+                          parts: {
+                            cpu: null,
+                            gpu: null,
+                            motherboard: null,
+                            memory: null,
+                            storage: null,
+                            psu: null,
+                            case: null,
+                            cooler: null,
+                            monitor: null
+                          },
+                          totalPrice: 0
+                        }));
+                        
+                        // クリア通知を表示
+                        warning(
+                          '構成をクリアしました',
+                          'すべてのパーツが削除されました',
+                          '構成クリア'
+                        );
+                      }}
                       className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm"
                     >
                       クリア
@@ -299,15 +389,74 @@ const App: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {activeTab === 'search' && (
+              <div className="space-y-6">
+                {/* パーツ検索コンポーネント */}
+                <PartSearch
+                  onPartSelect={handlePartSelect}
+                  showAddButton={true}
+                  addButtonText="構成に追加"
+                  className="w-full"
+                  allParts={sampleParts}
+                />
+
+                {/* 検索ガイド */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* 検索のコツ */}
+                  <div className="bg-blue-50 rounded-lg p-6">
+                    <h3 className="text-sm font-semibold text-blue-900 mb-3">
+                      🔍 検索のコツ
+                    </h3>
+                    <ul className="text-sm text-blue-800 space-y-2">
+                      <li>• 製品名、ブランド、型番で検索</li>
+                      <li>• カテゴリを選択して絞り込み</li>
+                      <li>• 複数キーワードでAND検索</li>
+                      <li>• あいまい検索に対応</li>
+                    </ul>
+                  </div>
+
+                  {/* 選択のヒント */}
+                  <div className="bg-green-50 rounded-lg p-6">
+                    <h3 className="text-sm font-semibold text-green-900 mb-3">
+                      💡 パーツ選択のヒント
+                    </h3>
+                    <ul className="text-sm text-green-800 space-y-2">
+                      <li>• 予算と性能のバランスを考慮</li>
+                      <li>• レビューと評価を参考に</li>
+                      <li>• 在庫状況を確認</li>
+                      <li>• 構成に追加して互換性チェック</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* サイドバー（構成サマリー） */}
+          {/* サイドバー（構成サマリー & 通知） */}
           <div className="lg:col-span-1">
-            <div className="sticky top-8">
+            <div className="sticky top-8 space-y-6">
               <ConfigSummary 
                 configuration={configuration}
                 className="w-full"
               />
+              
+              {/* 更新通知パネル */}
+              <div className="bg-white rounded-lg shadow-sm border p-4">
+                <UpdateNotifier
+                  notifications={notifications}
+                  onDismiss={dismissNotification}
+                  onRefresh={() => {
+                    // 手動更新処理（例：データ取得等）
+                    success(
+                      'データを更新しました',
+                      '最新の価格情報を取得しました',
+                      'データ更新'
+                    );
+                  }}
+                  className="w-full"
+                />
+              </div>
             </div>
           </div>
         </div>

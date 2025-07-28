@@ -1,0 +1,173 @@
+# Issue & Project Management Automation
+# Issue管理、ラベル付け、プロジェクト管理を自動化
+
+name: 📋 Project Management
+
+on:
+  issues:
+    types: [opened, edited, labeled, unlabeled]
+  pull_request:
+    types: [opened, edited, labeled, unlabeled, ready_for_review]
+  issue_comment:
+    types: [created]
+
+jobs:
+  # 新しいIssueの自動ラベル付け
+  auto-label-issues:
+    name: 🏷️ Auto Label Issues
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'opened'
+    steps:
+      - name: 🏷️ Apply labels based on issue content
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const title = issue.title.toLowerCase();
+            const body = issue.body?.toLowerCase() || '';
+            
+            const labels = [];
+            
+            // 機能追加
+            if (title.includes('feature') || title.includes('機能') || body.includes('新機能')) {
+              labels.push('enhancement');
+            }
+            
+            // バグレポート
+            if (title.includes('bug') || title.includes('バグ') || title.includes('エラー')) {
+              labels.push('bug');
+            }
+            
+            // UI/UXに関する内容
+            if (title.includes('ui') || title.includes('ux') || body.includes('デザイン')) {
+              labels.push('ui/ux');
+            }
+            
+            // パフォーマンス
+            if (title.includes('performance') || title.includes('パフォーマンス') || title.includes('速度')) {
+              labels.push('performance');
+            }
+            
+            // 検索機能
+            if (title.includes('search') || title.includes('検索')) {
+              labels.push('search');
+            }
+            
+            // 電力計算
+            if (title.includes('power') || title.includes('電力') || title.includes('電源')) {
+              labels.push('power-calculation');
+            }
+            
+            // 互換性
+            if (title.includes('compatibility') || title.includes('互換性')) {
+              labels.push('compatibility');
+            }
+            
+            // 優先度の自動判定
+            if (title.includes('urgent') || title.includes('緊急') || body.includes('重要')) {
+              labels.push('priority: high');
+            } else if (title.includes('nice to have') || body.includes('できれば')) {
+              labels.push('priority: low');
+            } else {
+              labels.push('priority: medium');
+            }
+            
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: labels
+              });
+            }
+
+  # PR レビュー依頼の自動化
+  auto-request-review:
+    name: 👀 Auto Request Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'opened'
+    steps:
+      - name: 👀 Request review from team
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            
+            // PRのサイズに基づくレビュワー決定
+            const changedFiles = pr.changed_files;
+            const additions = pr.additions;
+            const deletions = pr.deletions;
+            
+            let reviewers = [];
+            
+            // 大きな変更の場合は複数人レビューを要求
+            if (changedFiles > 10 || additions + deletions > 500) {
+              reviewers = ['team-lead', 'senior-dev']; // 実際のユーザー名に変更
+            } else {
+              reviewers = ['team-member']; // 実際のユーザー名に変更
+            }
+            
+            // ラベルも追加
+            const labels = [];
+            if (changedFiles > 10) {
+              labels.push('size: large');
+            } else if (changedFiles > 3) {
+              labels.push('size: medium');
+            } else {
+              labels.push('size: small');
+            }
+            
+            // レビュー依頼（実際のユーザーが存在する場合のみ）
+            try {
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                reviewers: reviewers
+              });
+            } catch (error) {
+              console.log('レビュワーの設定をスキップ:', error.message);
+            }
+            
+            // ラベル追加
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: labels
+              });
+            }
+
+  # スケジュールされたメンテナンス
+  schedule-maintenance:
+    name: 🔧 Scheduled Maintenance
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🧹 Close stale issues
+        uses: actions/stale@v9
+        with:
+          stale-issue-message: |
+            このIssueは30日間活動がないため、自動的にstaleマークが付けられました。
+            まだ関連性がある場合は、コメントを残してください。
+            さらに7日後に自動的にクローズされます。
+          close-issue-message: |
+            このIssueは長期間活動がないため、自動的にクローズされました。
+            必要に応じて再オープンしてください。
+          stale-pr-message: |
+            このPRは30日間活動がないため、自動的にstaleマークが付けられました。
+          close-pr-message: |
+            このPRは長期間活動がないため、自動的にクローズされました。
+          days-before-stale: 30
+          days-before-close: 7
+          exempt-issue-labels: 'pinned,security'
+          exempt-pr-labels: 'pinned'
+
+# スケジュール実行（週次メンテナンス）
+on:
+  schedule:
+    - cron: '0 3 * * 1'  # 毎週月曜日 UTC 3:00 AM

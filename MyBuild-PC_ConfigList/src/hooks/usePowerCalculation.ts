@@ -1,6 +1,7 @@
 // src/hooks/usePowerCalculation.ts
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { PCConfiguration, PowerCalculationResult, PSUSpecification } from '@/types';
+import { PCConfiguration } from '@/types';
+import { PowerCalculationResult, PSUSpecification } from '@/types/power';
 import { PowerCalculatorService } from '@/services/powerCalculator';
 
 interface UsePowerCalculationOptions {

@@ -1,5 +1,5 @@
 // src/data/sampleParts.ts
-import type { Part } from '@/types/index';
+import type { Part } from '../types/index';
 
 export const sampleParts: Part[] = [
   // CPU
@@ -19,7 +19,7 @@ export const sampleParts: Part[] = [
       power: 154,
       architecture: 'Raptor Lake'
     },
-    availability: true,
+    availability: 'in_stock',
     rating: 4.5,
     reviewCount: 1250
   },
@@ -39,7 +39,7 @@ export const sampleParts: Part[] = [
       power: 105,
       architecture: 'Zen 4'
     },
-    availability: true,
+    availability: 'in_stock',
     rating: 4.7,
     reviewCount: 890
   },
@@ -65,7 +65,7 @@ export const sampleParts: Part[] = [
       cpuPowerConnector: '8pin',
       power: 50
     },
-    availability: true,
+    availability: 'in_stock',
     rating: 4.3,
     reviewCount: 560
   },
@@ -89,7 +89,7 @@ export const sampleParts: Part[] = [
       cpuPowerConnector: '8pin',
       power: 45
     },
-    availability: true,
+    availability: 'in_stock',
     rating: 4.4,
     reviewCount: 420
   },
@@ -115,7 +115,7 @@ export const sampleParts: Part[] = [
       pciVersion: 'PCIe 4.0',
       slots: 2
     },
-    availability: true,
+    availability: 'in_stock',
     rating: 4.2,
     reviewCount: 2100
   },
@@ -139,7 +139,7 @@ export const sampleParts: Part[] = [
       pciVersion: 'PCIe 4.0',
       slots: 2
     },
-    availability: true,
+    availability: 'in_stock',
     rating: 4.1,
     reviewCount: 1800
   },
@@ -163,7 +163,7 @@ export const sampleParts: Part[] = [
       height: 31,
       power: 5
     },
-    availability: true,
+    availability: 'in_stock',
     rating: 4.6,
     reviewCount: 3200
   },
@@ -185,7 +185,7 @@ export const sampleParts: Part[] = [
       height: 44,
       power: 8
     },
-    availability: true,
+    availability: 'in_stock',
     rating: 4.5,
     reviewCount: 1100
   },
@@ -207,7 +207,7 @@ export const sampleParts: Part[] = [
       power: 6,
       controller: 'Samsung Pablo'
     },
-    availability: true,
+    availability: 'in_stock',
     rating: 4.7,
     reviewCount: 4500
   },
@@ -236,7 +236,7 @@ export const sampleParts: Part[] = [
       length: 160,
       warranty: 10
     },
-    availability: true,
+    availability: 'in_stock',
     rating: 4.8,
     reviewCount: 2800
   },
@@ -263,7 +263,7 @@ export const sampleParts: Part[] = [
       length: 140,
       warranty: 10
     },
-    availability: true,
+    availability: 'in_stock',
     rating: 4.7,
     reviewCount: 1900
   },
@@ -290,7 +290,7 @@ export const sampleParts: Part[] = [
       radiatorSupport: ['120mm', '140mm'],
       power: 20
     },
-    availability: true,
+    availability: 'in_stock',
     rating: 4.3,
     reviewCount: 850
   },
@@ -314,7 +314,7 @@ export const sampleParts: Part[] = [
       noiseLevel: 22.4,
       power: 15
     },
-    availability: true,
+    availability: 'in_stock',
     rating: 4.9,
     reviewCount: 3500
   }

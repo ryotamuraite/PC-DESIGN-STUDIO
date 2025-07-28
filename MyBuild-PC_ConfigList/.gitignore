@@ -12,6 +12,33 @@ dist
 dist-ssr
 *.local
 
+# 🔒 環境変数・機密情報
+.env
+.env.local
+.env.production
+.env.development
+.env.test
+
+# 🔑 APIキー・認証情報
+api-keys/
+secrets/
+credentials/
+*.key
+*.pem
+*.p12
+
+# 📊 データファイル（機密情報含む場合）
+data/cache/
+data/temp/
+data/logs/
+data/private/
+*.sqlite
+*.db
+
+# 🤖 GitHub Actions ローカル実行
+.github/workflows/local/
+act-runner/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -19,6 +46,21 @@ dist-ssr
 .DS_Store
 *.suo
 *.ntvs*
-*.njsproj
+*.njsproj*
 *.sln
 *.sw?
+
+# 🔍 テスト・デバッグファイル
+coverage/
+.nyc_output/
+test-results/
+debug/
+
+# 📱 モバイル
+*.ipa
+*.apk
+
+# 🌐 外部API関連
+api-responses/
+scraping-cache/
+external-data/

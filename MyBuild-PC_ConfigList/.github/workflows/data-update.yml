@@ -1,0 +1,228 @@
+# Data Update & External API Integration
+# 外部データソースからの情報取得と更新
+
+name: 📊 Data Update
+
+on:
+  schedule:
+    # 毎日 JST 11:00 (UTC 02:00) に実行
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: '強制更新フラグ'
+        required: false
+        default: 'false'
+        type: boolean
+      target_category:
+        description: '更新対象カテゴリ'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - cpu
+          - gpu
+          - motherboard
+          - memory
+          - storage
+          - psu
+
+env:
+  NODE_ENV: production
+  DATA_UPDATE_INTERVAL: 24h
+  MAX_RETRIES: 3
+
+jobs:
+  # データソース健全性チェック
+  health-check:
+    name: 🏥 Data Source Health Check
+    runs-on: ubuntu-latest
+    outputs:
+      sources-available: ${{ steps.check.outputs.available }}
+    steps:
+      - name: 🏥 Check external API availability
+        id: check
+        run: |
+          echo "外部データソースの健全性をチェック中..."
+          
+          # 実際のAPIエンドポイントをチェック（例）
+          # response=$(curl -s -o /dev/null -w "%{http_code}" https://api.example.com/health)
+          # if [ $response -eq 200 ]; then
+          #   echo "available=true" >> $GITHUB_OUTPUT
+          # else
+          #   echo "available=false" >> $GITHUB_OUTPUT
+          # fi
+          
+          # モックレスポンス（実装時に実際のチェックに置き換え）
+          echo "available=true" >> $GITHUB_OUTPUT
+
+  # メインデータ更新処理
+  update-parts-data:
+    name: 📦 Update Parts Database
+    runs-on: ubuntu-latest
+    needs: health-check
+    if: needs.health-check.outputs.sources-available == 'true'
+    strategy:
+      matrix:
+        category: [cpu, gpu, motherboard, memory, storage, psu, case, cooler]
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📋 Install dependencies
+        run: npm ci
+
+      - name: 📊 Update ${{ matrix.category }} data
+        run: |
+          echo "🔄 ${{ matrix.category }} カテゴリのデータを更新中..."
+          
+          # 実際のデータ更新スクリプト実行（例）
+          # node scripts/update-data.js --category=${{ matrix.category }}
+          
+          # モック処理（実装時に実際の処理に置き換え）
+          echo "{}" > "src/data/updated-${{ matrix.category }}.json"
+          echo "✅ ${{ matrix.category }} データ更新完了"
+
+      - name: 📊 Upload updated data
+        uses: actions/upload-artifact@v4
+        with:
+          name: updated-data-${{ matrix.category }}
+          path: src/data/updated-${{ matrix.category }}.json
+          retention-days: 1
+
+  # データ統合とコミット
+  commit-updated-data:
+    name: 💾 Commit Updated Data
+    runs-on: ubuntu-latest
+    needs: update-parts-data
+    if: always() && needs.update-parts-data.result == 'success'
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📥 Download all updated data
+        uses: actions/download-artifact@v4
+        with:
+          path: updated-data/
+
+      - name: 🔄 Merge updated data
+        run: |
+          echo "🔄 更新されたデータを統合中..."
+          
+          # 更新されたデータファイルを統合
+          for file in updated-data/*/updated-*.json; do
+            if [ -f "$file" ]; then
+              category=$(basename "$file" | sed 's/updated-\(.*\)\.json/\1/')
+              echo "統合中: $category"
+              # 実際の統合処理をここに追加
+              # jq '.data += input' src/data/main.json "$file" > tmp.json && mv tmp.json src/data/main.json
+            fi
+          done
+          
+          echo "✅ データ統合完了"
+
+      - name: 📊 Generate update summary
+        run: |
+          echo "📊 更新サマリーを生成中..."
+          
+          # 更新サマリーの生成
+          cat > UPDATE_SUMMARY.md << EOF
+          # データ更新サマリー
+          
+          **更新日時**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **更新トリガー**: ${{ github.event_name }}
+          
+          ## 更新されたカテゴリ
+          EOF
+          
+          for file in updated-data/*/updated-*.json; do
+            if [ -f "$file" ]; then
+              category=$(basename "$file" | sed 's/updated-\(.*\)\.json/\1/')
+              echo "- ✅ $category" >> UPDATE_SUMMARY.md
+            fi
+          done
+          
+          echo "" >> UPDATE_SUMMARY.md
+          echo "## 次回更新予定" >> UPDATE_SUMMARY.md
+          echo "$(date -u -d '+1 day' +"%Y-%m-%d %H:%M:%S UTC")" >> UPDATE_SUMMARY.md
+
+      - name: 💾 Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action [Data Update]"
+          
+          # 変更があるかチェック
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "📊 Auto-update parts data $(date -u +"%Y-%m-%d")"
+            git push
+            echo "✅ データ更新をコミットしました"
+          else
+            echo "ℹ️ 更新対象データなし"
+          fi
+
+  # エラー通知
+  notify-on-failure:
+    name: 📢 Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [health-check, update-parts-data, commit-updated-data]
+    if: failure()
+    steps:
+      - name: 📢 Create issue on failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🚨 データ更新処理が失敗しました (${new Date().toISOString().split('T')[0]})`;
+            const body = `
+            ## データ更新エラー
+            
+            **発生日時**: ${new Date().toISOString()}
+            **ワークフロー**: ${{ github.workflow }}
+            **実行ID**: ${{ github.run_id }}
+            
+            ### エラー詳細
+            - Health Check: ${{ needs.health-check.result }}
+            - Data Update: ${{ needs.update-parts-data.result }}
+            - Commit: ${{ needs.commit-updated-data.result }}
+            
+            ### 対応が必要な項目
+            - [ ] エラーログの確認
+            - [ ] 外部APIの状態確認
+            - [ ] データ整合性の確認
+            - [ ] 手動データ更新の実行
+            
+            ### ワークフロー実行ログ
+            [実行ログを確認](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            `;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['bug', 'data-update', 'priority: high']
+            });
+
+  # 成功通知とサマリー
+  success-summary:
+    name: ✅ Success Summary
+    runs-on: ubuntu-latest
+    needs: [health-check, update-parts-data, commit-updated-data]
+    if: success()
+    steps:
+      - name: ✅ Post success summary
+        run: |
+          echo "🎉 データ更新処理が正常に完了しました"
+          echo "更新日時: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          echo "次回更新: $(date -u -d '+1 day' +"%Y-%m-%d %H:%M:%S UTC")"

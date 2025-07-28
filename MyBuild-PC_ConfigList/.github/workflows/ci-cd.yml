@@ -1,0 +1,186 @@
+# MyBuild PC ConfigList - CI/CD Pipeline
+# 自動ビルド、テスト、デプロイを行うGitHub Actions設定
+
+name: 🚀 Build & Deploy
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+# 並行実行の制御
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # コード品質チェック
+  lint-and-typecheck:
+    name: 🔍 Code Quality Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📋 Install dependencies
+        run: npm ci
+
+      - name: 🧹 Run ESLint
+        run: npm run lint
+
+      - name: 🔍 TypeScript type check
+        run: npx tsc --noEmit
+
+  # ビルドテスト
+  build:
+    name: 🏗️ Build Application
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📋 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build application
+        run: npm run build
+
+      - name: 📊 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-files
+          path: dist/
+          retention-days: 7
+
+  # セキュリティスキャン
+  security-scan:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔍 Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: 📊 Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # デプロイ（main ブランチのみ）
+  deploy:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📋 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build for production
+        run: npm run build
+
+      - name: 🚀 Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          cname: mybuild-pc-config.example.com # 必要に応じて独自ドメインを設定
+
+  # PR環境デプロイ（オプション）
+  preview-deploy:
+    name: 🔄 Deploy Preview
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, build]
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📋 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build for preview
+        run: npm run build
+
+      - name: 🔄 Deploy to preview environment
+        run: |
+          echo "プレビュー環境へのデプロイ処理"
+          echo "PR #${{ github.event.number }} のプレビューを作成"
+          # 実際のプレビューデプロイ処理をここに追加
+
+  # データ更新（スケジュール実行）
+  update-data:
+    name: 📊 Update Part Data
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📋 Install dependencies
+        run: npm ci
+
+      - name: 📊 Update parts database
+        run: |
+          echo "パーツデータベースの更新処理"
+          echo "価格情報の取得・更新を実行"
+          # 実際のデータ更新スクリプトをここに追加
+
+      - name: 💾 Commit updated data
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git diff --staged --quiet || git commit -m "📊 Auto-update parts data [skip ci]"
+          git push
+
+# スケジュール実行（毎日午前2時にデータ更新）
+on:
+  schedule:
+    - cron: '0 2 * * *'  # UTC 2:00 AM (JST 11:00 AM)
+  workflow_dispatch:  # 手動実行を許可
