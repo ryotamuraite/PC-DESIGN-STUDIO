@@ -100,7 +100,7 @@ export const useSearch = (
 
   // デバウンス付き検索
   const debouncedSearch = useMemo(
-    () => debounce(search, debounceMs),
+    () => debounce((queryUpdates?: Partial<SearchQuery>) => search(queryUpdates), debounceMs), // 🔧 型修正
     [search, debounceMs]
   );
 
@@ -212,13 +212,13 @@ export const useSearch = (
 };
 
 // デバウンス用ユーティリティ
-function debounce<T extends (...args: unknown[]) => unknown>(
-  func: T,
+function debounce<TArgs extends unknown[]>( // 🔧 any[] → unknown[] に修正
+  func: (...args: TArgs) => unknown, // 🔧 any → unknown に修正
   wait: number
-): (...args: Parameters<T>) => void {
+): (...args: TArgs) => void {
   let timeout: NodeJS.Timeout;
   
-  return (...args: Parameters<T>) => {
+  return (...args: TArgs) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };

@@ -173,7 +173,7 @@ class SearchService {
     if (filters.availability && filters.availability.length > 0) {
       result = result.filter(part => {
         const availability = part.availability || 'in_stock';
-        return filters.availability!.includes(availability);
+        return filters.availability!.includes(availability as 'in_stock' | 'out_of_stock' | 'limited');
       });
     }
 

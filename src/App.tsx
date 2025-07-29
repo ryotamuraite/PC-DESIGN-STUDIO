@@ -9,11 +9,7 @@ import UpdateNotifier from '@/components/notifications/UpdateNotifier';
 import { useNotifications } from '@/hooks/useNotifications';
 import { sampleParts, getPartsByCategory, compatibleCombinations } from '@/data/sampleParts';
 
-// 未使用変数（ESLintで警告されるはず）
-const unusedVariable = 'test';
-
-// 型エラー（TypeScriptで警告されるはず）
-const wrongType: string = 123;
+// 🔧 修正: 未使用変数と型エラーを削除
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'builder' | 'power' | 'compatibility' | 'search'>('builder');
@@ -300,7 +296,7 @@ const App: React.FC = () => {
                       <PartSelector
                         key={category}
                         category={category}
-                        selectedPart={configuration.parts[category]}
+                        selectedPart={configuration.parts[category] || null} // 🔧 undefinedをnullに変換
                         onSelect={(part) => selectPart(category, part)}
                       />
                     ))}

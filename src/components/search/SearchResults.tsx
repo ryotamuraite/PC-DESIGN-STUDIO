@@ -175,11 +175,14 @@ const SearchResultItem: React.FC<{
   addButtonText: string;
 }> = ({ part, onSelect, showAddButton, addButtonText }) => {
   const availability = part.availability || 'in_stock';
+  // 🔧 修正: 全ての在庫状態に対応
   const availabilityConfig = {
     in_stock: { text: '在庫あり', color: 'text-green-600' },
     out_of_stock: { text: '在庫なし', color: 'text-red-600' },
-    limited: { text: '残りわずか', color: 'text-yellow-600' }
-  };
+    limited: { text: '残りわずか', color: 'text-yellow-600' },
+    discontinued: { text: '販売終了', color: 'text-gray-600' },
+    pre_order: { text: '予約受付中', color: 'text-blue-600' }
+  } as const;
 
   return (
     <div className="p-6 hover:bg-gray-50 transition-colors">

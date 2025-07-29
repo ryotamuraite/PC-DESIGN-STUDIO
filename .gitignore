@@ -1,3 +1,32 @@
-/99_Other
-/MyBuild-PC_ConfigList/node_modules
-/.vscode
+# 依存関係
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ビルド出力
+dist/
+build/
+.vite/
+
+# 環境設定
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE/エディタ
+.DS_Store
+*.swp
+*.swo
+*~
+
+# ログ
+logs/
+*.log
+
+# その他
+.cache/
+.temp/
+docs/99_Other/

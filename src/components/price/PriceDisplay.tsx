@@ -33,12 +33,14 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({
 
   // パーツ別価格内訳（showBreakdown=trueの場合のみ）
   const priceBreakdown = showBreakdown 
-    ? Object.entries(currentConfig.parts).map(([category, part]) => ({
-        category,
-        name: part.name,
-        price: part.price,
-        percentage: totalPrice > 0 ? (part.price / totalPrice) * 100 : 0
-      }))
+    ? Object.entries(currentConfig.parts)
+        .filter(([, part]) => part !== null) // 🔧 nullチェック追加
+        .map(([category, part]) => ({
+          category,
+          name: part!.name,
+          price: part!.price,
+          percentage: totalPrice > 0 ? (part!.price / totalPrice) * 100 : 0
+        }))
     : [];
 
   if (compact) {

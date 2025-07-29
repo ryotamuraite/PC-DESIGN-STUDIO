@@ -80,12 +80,18 @@ const PartSelector: React.FC = () => {
                     >
                       <div>
                         <h4 className="font-medium text-gray-900">{part.name}</h4>
-                        <p className="text-sm text-gray-600">{part.brand}</p>
-                        {part.powerConsumption && (
-                          <p className="text-xs text-gray-500">
-                            消費電力: {part.powerConsumption}W
-                          </p>
-                        )}
+                        <p className="text-sm text-gray-600">{part.brand || part.manufacturer}</p>
+                        {(() => {
+                          const power = part.powerConsumption ?? 
+                            (typeof part.specifications?.power === 'number' ? part.specifications.power : undefined) ??
+                            (typeof part.specifications?.tdp === 'number' ? part.specifications.tdp : undefined);
+                          
+                          return power ? (
+                            <p className="text-xs text-gray-500">
+                              消費電力: {power}W
+                            </p>
+                          ) : null;
+                        })()}
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-gray-900">

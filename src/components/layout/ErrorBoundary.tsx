@@ -1,7 +1,7 @@
 // src/components/layout/ErrorBoundary.tsx
 // Reactエラー境界コンポーネント
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Bug, Home } from 'lucide-react';
 import ErrorHandler from '@/utils/errorHandler';
 

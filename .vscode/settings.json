@@ -1,0 +1,5 @@
+{
+  // プロジェクト固有の設定
+  "eslint.workingDirectories": ["./"],
+  "typescript.preferences.includePackageJsonAutoImports": "auto"
+}
