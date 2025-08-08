@@ -113,28 +113,29 @@ export const SmartPartLabel: React.FC<SmartPartLabelProps> = ({
     }
   });
 
-  // 線のジオメトリを作成
-  const lineGeometry = useMemo(() => {
+  // 線オブジェクトを作成
+  const lineObject = useMemo(() => {
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array([
       partPosition[0], partPosition[1], partPosition[2],
       labelPosition[0], labelPosition[1], labelPosition[2]
     ]);
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    return geometry;
-  }, [partPosition, labelPosition]);
+    
+    const material = new THREE.LineBasicMaterial({
+      color: color,
+      transparent: true,
+      opacity: 0.8
+    });
+    
+    const line = new THREE.Line(geometry, material);
+    return line;
+  }, [partPosition, labelPosition, color]);
 
   return (
     <group ref={labelRef}>
       {/* 接続線 */}
-      <line ref={lineRef as any} geometry={lineGeometry}>
-        <lineBasicMaterial
-          color={color}
-          transparent
-          opacity={0.8}
-          linewidth={2}
-        />
-      </line>
+      <primitive object={lineObject} ref={lineRef} />
       
       {/* 接続点（パーツ側） */}
       <mesh position={partPosition}>

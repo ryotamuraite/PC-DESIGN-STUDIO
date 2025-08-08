@@ -42,7 +42,6 @@ export const PartsRenderer: React.FC<PartsRendererProps> = ({
       {parts.cpu && (
         <group>
           <CPUComponent 
-            cpuData={parts.cpu} 
             position={[-0.3, -0.17, -0.3]} 
           />
         </group>
@@ -52,7 +51,6 @@ export const PartsRenderer: React.FC<PartsRendererProps> = ({
       {parts.gpu && (
         <group>
           <GPUComponent 
-            gpuData={parts.gpu} 
             position={[0.1, -0.25, -0.1]} 
           />
         </group>
@@ -82,7 +80,6 @@ export const PartsRenderer: React.FC<PartsRendererProps> = ({
       {parts.psu && (
         <group>
           <PSUComponent 
-            psuData={parts.psu} 
             position={[0.3, -0.78, -0.4]} 
           />
         </group>
@@ -92,7 +89,6 @@ export const PartsRenderer: React.FC<PartsRendererProps> = ({
       {parts.cooler && (
         <group>
           <CoolerComponent 
-            coolerData={parts.cooler} 
             position={[-0.3, 0.05, -0.3]} 
           />
         </group>
@@ -139,9 +135,8 @@ function getPartInfo(part: Part, category: string): string {
 
 // CPU 3Dコンポーネント
 const CPUComponent: React.FC<{
-  cpuData: Part;
   position: [number, number, number];
-}> = ({ cpuData: _cpuData, position }) => {
+}> = ({ position }) => {
   return (
     <group position={position}>
       {/* CPUソケット */}
@@ -159,9 +154,8 @@ const CPUComponent: React.FC<{
 
 // GPU 3Dコンポーネント
 const GPUComponent: React.FC<{
-  gpuData: Part;
   position: [number, number, number];
-}> = ({ gpuData: _gpuData, position }) => {
+}> = ({ position }) => {
   return (
     <group position={position}>
       {/* GPU基板 */}
@@ -235,9 +229,8 @@ const StorageComponent: React.FC<{
 
 // PSU 3Dコンポーネント
 const PSUComponent: React.FC<{
-  psuData: Part;
   position: [number, number, number];
-}> = ({ psuData: _psuData, position }) => {
+}> = ({ position }) => {
   return (
     <group position={position}>
       {/* PSU本体 */}
@@ -255,9 +248,8 @@ const PSUComponent: React.FC<{
 
 // CPUクーラー 3Dコンポーネント
 const CoolerComponent: React.FC<{
-  coolerData: Part;
   position: [number, number, number];
-}> = ({ coolerData: _coolerData, position }) => {
+}> = ({ position }) => {
   return (
     <group position={position}>
       {/* ヒートシンク */}
