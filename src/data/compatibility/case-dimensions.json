@@ -1,0 +1,280 @@
+{
+  "caseFormFactors": {
+    "Full_Tower": {
+      "description": "フルタワーケース",
+      "dimensions": {
+        "height": "500-600mm",
+        "width": "230-250mm", 
+        "depth": "500-550mm"
+      },
+      "supportedMotherboards": ["E-ATX", "ATX", "Micro-ATX", "Mini-ITX"],
+      "maxGpuLength": 450,
+      "maxCpuCoolerHeight": 190,
+      "expansionSlots": 8,
+      "driveSupport": {
+        "3.5inch": 8,
+        "2.5inch": 12
+      },
+      "fanSupport": {
+        "front": "3x 140mm or 3x 120mm",
+        "top": "3x 140mm or 3x 120mm", 
+        "rear": "1x 140mm or 1x 120mm",
+        "bottom": "2x 120mm"
+      },
+      "radiatorSupport": {
+        "front": "420mm, 360mm, 280mm, 240mm",
+        "top": "420mm, 360mm, 280mm, 240mm",
+        "rear": "120mm"
+      }
+    },
+    "Mid_Tower": {
+      "description": "ミドルタワーケース（最も一般的）",
+      "dimensions": {
+        "height": "400-500mm",
+        "width": "200-230mm",
+        "depth": "400-480mm"
+      },
+      "supportedMotherboards": ["ATX", "Micro-ATX", "Mini-ITX"],
+      "maxGpuLength": 400,
+      "maxCpuCoolerHeight": 170,
+      "expansionSlots": 7,
+      "driveSupport": {
+        "3.5inch": 4,
+        "2.5inch": 6
+      },
+      "fanSupport": {
+        "front": "2x 140mm or 3x 120mm",
+        "top": "2x 140mm or 2x 120mm",
+        "rear": "1x 140mm or 1x 120mm"
+      },
+      "radiatorSupport": {
+        "front": "360mm, 280mm, 240mm",
+        "top": "280mm, 240mm", 
+        "rear": "120mm"
+      }
+    },
+    "Mini_Tower": {
+      "description": "ミニタワーケース",
+      "dimensions": {
+        "height": "350-400mm",
+        "width": "180-200mm",
+        "depth": "350-400mm"
+      },
+      "supportedMotherboards": ["Micro-ATX", "Mini-ITX"],
+      "maxGpuLength": 350,
+      "maxCpuCoolerHeight": 155,
+      "expansionSlots": 4,
+      "driveSupport": {
+        "3.5inch": 2,
+        "2.5inch": 4
+      },
+      "fanSupport": {
+        "front": "2x 120mm",
+        "top": "1x 120mm",
+        "rear": "1x 120mm"
+      },
+      "radiatorSupport": {
+        "front": "240mm",
+        "rear": "120mm"
+      }
+    },
+    "Mini_ITX": {
+      "description": "Mini-ITXケース（小型）",
+      "dimensions": {
+        "height": "200-300mm",
+        "width": "150-200mm",
+        "depth": "250-350mm"
+      },
+      "supportedMotherboards": ["Mini-ITX"],
+      "maxGpuLength": 280,
+      "maxCpuCoolerHeight": 130,
+      "expansionSlots": 2,
+      "driveSupport": {
+        "3.5inch": 1,
+        "2.5inch": 2
+      },
+      "fanSupport": {
+        "front": "1x 120mm",
+        "rear": "1x 80mm or 1x 120mm"
+      },
+      "radiatorSupport": {
+        "front": "120mm",
+        "rear": "120mm"
+      }
+    },
+    "SFF": {
+      "description": "Small Form Factor（超小型）",
+      "dimensions": {
+        "height": "150-250mm",
+        "width": "100-150mm",
+        "depth": "200-300mm"
+      },
+      "supportedMotherboards": ["Mini-ITX"],
+      "maxGpuLength": 200,
+      "maxCpuCoolerHeight": 70,
+      "expansionSlots": 1,
+      "driveSupport": {
+        "3.5inch": 0,
+        "2.5inch": 2
+      },
+      "fanSupport": {
+        "front": "1x 80mm or 1x 92mm"
+      },
+      "radiatorSupport": {
+        "external": "120mm AIO only"
+      }
+    }
+  },
+  "gpuCompatibility": {
+    "RTX_4090": {
+      "length": 335,
+      "height": 140,
+      "width": 61,
+      "compatibleCases": ["Full_Tower", "Mid_Tower"],
+      "warnings": ["Mid_Tower may have tight fit"],
+      "recommendations": "Full Tower推奨"
+    },
+    "RTX_4080": {
+      "length": 310,
+      "height": 137,
+      "width": 56,
+      "compatibleCases": ["Full_Tower", "Mid_Tower"],
+      "warnings": [],
+      "recommendations": "Mid Tower以上推奨"
+    },
+    "RTX_4070": {
+      "length": 290,
+      "height": 112,
+      "width": 50,
+      "compatibleCases": ["Full_Tower", "Mid_Tower", "Mini_Tower"],
+      "warnings": [],
+      "recommendations": "大部分のケースで問題なし"
+    },
+    "RTX_4060": {
+      "length": 245,
+      "height": 112,
+      "width": 40,
+      "compatibleCases": ["Full_Tower", "Mid_Tower", "Mini_Tower", "Mini_ITX"],
+      "warnings": [],
+      "recommendations": "ほぼ全てのケースで使用可能"
+    }
+  },
+  "coolerCompatibility": {
+    "air_coolers": {
+      "Noctua_NH_D15": {
+        "height": 165,
+        "compatibleCases": ["Full_Tower", "Mid_Tower"],
+        "sockets": ["LGA1700", "LGA1200", "AM5", "AM4"],
+        "warnings": ["一部Mid Towerでメモリクリアランス要注意"]
+      },
+      "Noctua_NH_U12S": {
+        "height": 158,
+        "compatibleCases": ["Full_Tower", "Mid_Tower", "Mini_Tower"],
+        "sockets": ["LGA1700", "LGA1200", "AM5", "AM4"],
+        "warnings": []
+      },
+      "Noctua_NH_L9i": {
+        "height": 37,
+        "compatibleCases": ["Full_Tower", "Mid_Tower", "Mini_Tower", "Mini_ITX", "SFF"],
+        "sockets": ["LGA1700", "LGA1200"],
+        "warnings": ["低TDP CPU専用"]
+      }
+    },
+    "liquid_coolers": {
+      "120mm_AIO": {
+        "radiatorSize": "120x120x25mm",
+        "compatibleCases": ["Full_Tower", "Mid_Tower", "Mini_Tower", "Mini_ITX"],
+        "mountingOptions": ["front", "rear", "top"],
+        "warnings": []
+      },
+      "240mm_AIO": {
+        "radiatorSize": "240x120x25mm",
+        "compatibleCases": ["Full_Tower", "Mid_Tower", "Mini_Tower"],
+        "mountingOptions": ["front", "top"],
+        "warnings": ["要ラジエーター取り付けスペース確認"]
+      },
+      "360mm_AIO": {
+        "radiatorSize": "360x120x25mm",
+        "compatibleCases": ["Full_Tower", "Mid_Tower"],
+        "mountingOptions": ["front", "top"],
+        "warnings": ["Large Caseのみ推奨"]
+      }
+    }
+  },
+  "physicalCompatibilityRules": [
+    {
+      "rule": "motherboard_case_fit",
+      "description": "マザーボードがケースサイズに収まるかチェック",
+      "severity": "critical"
+    },
+    {
+      "rule": "gpu_length_check",
+      "description": "GPU長がケース内部長に収まるかチェック",
+      "severity": "critical"
+    },
+    {
+      "rule": "cooler_height_check", 
+      "description": "CPUクーラー高がケース内部高に収まるかチェック",
+      "severity": "critical"
+    },
+    {
+      "rule": "ram_clearance",
+      "description": "大型CPUクーラーとメモリのクリアランスチェック",
+      "severity": "warning"
+    },
+    {
+      "rule": "radiator_mounting",
+      "description": "簡易水冷のラジエーター取り付け可能位置チェック",
+      "severity": "warning"
+    },
+    {
+      "rule": "cable_management",
+      "description": "ケーブル管理スペースの十分さチェック",
+      "severity": "info"
+    }
+  ],
+  "compatibilityMatrix": {
+    "gaming_builds": {
+      "budget": {
+        "recommendedCase": "Mini_Tower",
+        "maxGpuLength": 350,
+        "maxCoolerHeight": 155,
+        "notes": "コストパフォーマンス重視"
+      },
+      "mainstream": {
+        "recommendedCase": "Mid_Tower",
+        "maxGpuLength": 400,
+        "maxCoolerHeight": 170,
+        "notes": "最も一般的な構成"
+      },
+      "high_end": {
+        "recommendedCase": "Full_Tower",
+        "maxGpuLength": 450,
+        "maxCoolerHeight": 190,
+        "notes": "冷却・拡張性重視"
+      }
+    },
+    "workstation_builds": {
+      "compact": {
+        "recommendedCase": "Mini_ITX",
+        "maxGpuLength": 280,
+        "maxCoolerHeight": 130,
+        "notes": "省スペース重視"
+      },
+      "standard": {
+        "recommendedCase": "Mid_Tower",
+        "maxGpuLength": 400,
+        "maxCoolerHeight": 170,
+        "notes": "バランス型"
+      },
+      "professional": {
+        "recommendedCase": "Full_Tower",
+        "maxGpuLength": 450,
+        "maxCoolerHeight": 190,
+        "notes": "最大性能・拡張性"
+      }
+    }
+  },
+  "lastUpdated": "2025-08-05T12:00:00Z",
+  "version": "1.0.0"
+}

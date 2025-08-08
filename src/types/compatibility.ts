@@ -39,54 +39,138 @@ export type CompatibilityIssueType =
   | 'connector_missing'
   | 'missing_part';
 
-// 詳細互換性チェック結果
+// 詳細互換性チェック結果（パフォーマンス予測統合版）
 export interface CompatibilityDetails {
   cpuSocket: SocketCompatibility;
   memoryType: MemoryCompatibility;
   powerConnectors: PowerConnectorCompatibility;
   physicalFit: PhysicalCompatibility;
   performanceMatch: PerformanceCompatibility;
+  performancePrediction?: {
+    overallScore: number;
+    bottleneckAnalysis: {
+      cpuUtilization: number;
+      gpuUtilization: number;
+      bottleneckType: 'cpu' | 'gpu' | 'balanced' | 'memory' | 'unknown';
+      severity: 'none' | 'mild' | 'moderate' | 'severe';
+      ratio: number;
+      message: string;
+      resolutionImpact: Record<string, { cpuBound: boolean; gpuBound: boolean }>;
+    };
+    gamingPerformance: {
+      averageFps: Record<string, number>;
+      gameSpecificFps: Record<string, Record<string, number>>;
+      recommendedResolution: string;
+      rayTracingViable: boolean;
+      dlssAvailable: boolean;
+      performanceClass: 'entry' | 'mainstream' | 'high-end' | 'flagship';
+    };
+    useCaseScores: {
+      gaming: number;
+      contentCreation: number;
+      workstation: number;
+      overall: number;
+      details: Record<string, { score: number; explanation: string }>;
+    };
+    recommendations: Array<{
+      type: 'upgrade' | 'optimize' | 'alternative';
+      priority: 'high' | 'medium' | 'low';
+      component: 'cpu' | 'gpu' | 'memory' | 'storage';
+      title: string;
+      description: string;
+      expectedImprovement: string;
+      estimatedCost?: number;
+    }>;
+    optimizations: Array<{
+      category: 'settings' | 'hardware' | 'configuration';
+      title: string;
+      description: string;
+      impact: 'high' | 'medium' | 'low';
+      difficulty: 'easy' | 'medium' | 'hard';
+    }>;
+    predictedAt: Date;
+  };
 }
 
-// CPUソケット互換性
+// CPUソケット互換性（強化版）
 export interface SocketCompatibility {
   compatible: boolean;
   cpuSocket?: string;
   motherboardSocket?: string;
+  chipset?: string;
+  supportedChipsets?: string[];
   message: string;
 }
 
-// メモリ互換性
+// メモリ互換性（強化版）
 export interface MemoryCompatibility {
   compatible: boolean;
   memoryType?: string;
-  supportedTypes?: string[];
+  memorySpeed?: number;
+  totalCapacity?: number;
   maxCapacity?: number;
+  moduleCount?: number;
+  isJedecStandard?: boolean;
+  isOverclocking?: boolean;
+  dualChannelRecommended?: boolean;
+  supportedSpeeds?: number[];
+  supportedTypes?: string[];
+  warnings?: string[];
   message: string;
 }
 
-// 電源コネクタ互換性
+// 電源コネクタ互換性（データベース駆動強化版）
 export interface PowerConnectorCompatibility {
   compatible: boolean;
   requiredConnectors: string[];
   availableConnectors: string[];
   missingConnectors: string[];
+  requiredDetails?: Array<{connector: string, purpose: string, device: string}>;
+  missingDetails?: Array<{connector: string, purpose: string, device: string}>;
+  powerWarning?: string;
+  psuCategory?: string;
   message: string;
 }
 
-// 物理的互換性
+// 物理的互換性（データベース駆動強化版）
 export interface PhysicalCompatibility {
   compatible: boolean;
   issues: string[];
   warnings: string[];
+  detailedChecks?: Array<{check: string, status: 'pass' | 'warning' | 'fail', details: string}>;
+  caseType?: string;
+  clearanceAnalysis?: Array<{check: string, status: 'pass' | 'warning' | 'fail', details: string}>;
   message: string;
 }
 
-// パフォーマンス互換性
+// パフォーマンス互換性（パフォーマンス予測統合版）
 export interface PerformanceCompatibility {
   balanced: boolean;
   bottlenecks: string[];
   recommendations: string[];
+  severity?: 'none' | 'mild' | 'moderate' | 'severe';
+  performanceScore?: number;
+  useCaseScores?: {
+    gaming: number;
+    contentCreation: number;
+    workstation: number;
+    overall: number;
+  };
+  bottleneckAnalysis?: {
+    cpuUtilization: number;
+    gpuUtilization: number;
+    bottleneckType: 'cpu' | 'gpu' | 'balanced' | 'memory' | 'unknown';
+    severity: 'none' | 'mild' | 'moderate' | 'severe';
+    ratio: number;
+    message: string;
+  };
+  gamingPerformance?: {
+    averageFps: Record<string, number>;
+    recommendedResolution: string;
+    rayTracingViable: boolean;
+    dlssAvailable: boolean;
+    performanceClass: 'entry' | 'mainstream' | 'high-end' | 'flagship';
+  };
   message: string;
 }
 

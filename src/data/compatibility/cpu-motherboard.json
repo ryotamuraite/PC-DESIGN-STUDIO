@@ -1,0 +1,189 @@
+{
+  "socketCompatibility": {
+    "LGA1700": {
+      "description": "Intel 12世代、13世代、14世代CPU対応",
+      "supportedCPUs": [
+        "Intel Core i9-14900K",
+        "Intel Core i7-14700K", 
+        "Intel Core i5-14600K",
+        "Intel Core i9-13900K",
+        "Intel Core i7-13700K",
+        "Intel Core i5-13600K",
+        "Intel Core i9-12900K",
+        "Intel Core i7-12700K",
+        "Intel Core i5-12600K",
+        "Intel Core i3-12100"
+      ],
+      "supportedChipsets": [
+        "Z790", "Z690", "B760", "B660", "H770", "H670", "H610"
+      ],
+      "coolerCompatibility": [
+        "LGA1700", "LGA115x_with_adapter"
+      ],
+      "memorySupport": ["DDR5", "DDR4"],
+      "maxMemoryCapacity": 128,
+      "pcieSlots": {
+        "gpu": "PCIe 5.0 x16",
+        "expansion": "PCIe 4.0 x8/x4"
+      }
+    },
+    "LGA1200": {
+      "description": "Intel 10世代、11世代CPU対応",
+      "supportedCPUs": [
+        "Intel Core i9-11900K",
+        "Intel Core i7-11700K",
+        "Intel Core i5-11600K",
+        "Intel Core i9-10900K",
+        "Intel Core i7-10700K",
+        "Intel Core i5-10600K",
+        "Intel Core i3-10100"
+      ],
+      "supportedChipsets": [
+        "Z590", "Z490", "B560", "B460", "H570", "H470", "H410"
+      ],
+      "coolerCompatibility": [
+        "LGA1200", "LGA115x"
+      ],
+      "memorySupport": ["DDR4"],
+      "maxMemoryCapacity": 128,
+      "pcieSlots": {
+        "gpu": "PCIe 4.0 x16",
+        "expansion": "PCIe 3.0 x8/x4"
+      }
+    },
+    "AM5": {
+      "description": "AMD Ryzen 7000、8000、9000シリーズ対応",
+      "supportedCPUs": [
+        "AMD Ryzen 9 7950X",
+        "AMD Ryzen 9 7900X",
+        "AMD Ryzen 7 7700X",
+        "AMD Ryzen 5 7600X",
+        "AMD Ryzen 9 7950X3D",
+        "AMD Ryzen 7 7800X3D",
+        "AMD Ryzen 5 7600X3D",
+        "AMD Ryzen 9 9950X",
+        "AMD Ryzen 9 9900X",
+        "AMD Ryzen 7 9700X",
+        "AMD Ryzen 5 9600X"
+      ],
+      "supportedChipsets": [
+        "X670E", "X670", "B650E", "B650", "A620"
+      ],
+      "coolerCompatibility": [
+        "AM5", "AM4"
+      ],
+      "memorySupport": ["DDR5"],
+      "maxMemoryCapacity": 192,
+      "pcieSlots": {
+        "gpu": "PCIe 5.0 x16",
+        "expansion": "PCIe 4.0 x8/x4"
+      }
+    },
+    "AM4": {
+      "description": "AMD Ryzen 1000-5000シリーズ対応",
+      "supportedCPUs": [
+        "AMD Ryzen 9 5950X",
+        "AMD Ryzen 9 5900X",
+        "AMD Ryzen 7 5800X",
+        "AMD Ryzen 5 5600X",
+        "AMD Ryzen 9 5900X3D",
+        "AMD Ryzen 7 5800X3D",
+        "AMD Ryzen 5 5600X3D",
+        "AMD Ryzen 9 3950X",
+        "AMD Ryzen 7 3700X",
+        "AMD Ryzen 5 3600X"
+      ],
+      "supportedChipsets": [
+        "X570", "X470", "B550", "B450", "A520", "A320"
+      ],
+      "coolerCompatibility": [
+        "AM4", "AM3"
+      ],
+      "memorySupport": ["DDR4"],
+      "maxMemoryCapacity": 128,
+      "pcieSlots": {
+        "gpu": "PCIe 4.0 x16",
+        "expansion": "PCIe 3.0 x8/x4"
+      }
+    }
+  },
+  "formFactorCompatibility": {
+    "ATX": {
+      "supportedCases": ["Full Tower", "Mid Tower", "ATX"],
+      "dimensions": "305 x 244 mm",
+      "expansionSlots": 7,
+      "ramSlots": 4,
+      "powerConnectors": ["24pin", "8pin_cpu"]
+    },
+    "Micro-ATX": {
+      "supportedCases": ["Full Tower", "Mid Tower", "Micro-ATX", "Mini Tower"],
+      "dimensions": "244 x 244 mm", 
+      "expansionSlots": 4,
+      "ramSlots": 4,
+      "powerConnectors": ["24pin", "8pin_cpu"]
+    },
+    "Mini-ITX": {
+      "supportedCases": ["Full Tower", "Mid Tower", "Mini-ITX", "SFF"],
+      "dimensions": "170 x 170 mm",
+      "expansionSlots": 1,
+      "ramSlots": 2,
+      "powerConnectors": ["24pin", "8pin_cpu"]
+    }
+  },
+  "coolerSocketCompatibility": {
+    "LGA1700": {
+      "compatibleCoolers": [
+        "LGA1700 Native",
+        "LGA115x with LGA1700 adapter"
+      ],
+      "mountingHole": "115.5 x 78.1 mm",
+      "maxCoolerHeight": {
+        "air": 180,
+        "liquid_120mm": 40,
+        "liquid_240mm": 40,
+        "liquid_360mm": 40
+      }
+    },
+    "LGA1200": {
+      "compatibleCoolers": [
+        "LGA1200 Native",
+        "LGA115x"
+      ],
+      "mountingHole": "75 x 75 mm",
+      "maxCoolerHeight": {
+        "air": 175,
+        "liquid_120mm": 40,
+        "liquid_240mm": 40,
+        "liquid_360mm": 40
+      }
+    },
+    "AM5": {
+      "compatibleCoolers": [
+        "AM5 Native",
+        "AM4 with AM5 adapter"
+      ],
+      "mountingHole": "54 x 90 mm",
+      "maxCoolerHeight": {
+        "air": 170,
+        "liquid_120mm": 40,
+        "liquid_240mm": 40,
+        "liquid_360mm": 40
+      }
+    },
+    "AM4": {
+      "compatibleCoolers": [
+        "AM4 Native",
+        "AM3+"
+      ],
+      "mountingHole": "54 x 90 mm", 
+      "maxCoolerHeight": {
+        "air": 165,
+        "liquid_120mm": 40,
+        "liquid_240mm": 40,
+        "liquid_360mm": 40
+      }
+    }
+  },
+  "lastUpdated": "2025-08-05T12:00:00Z",
+  "version": "1.0.0"
+}

@@ -15,7 +15,7 @@
     "update-data": "node scripts/update-data.mjs",
     "update-data:mock": "node scripts/update-data.mjs --mode=mock --dry-run=false --verbose",
     "update-data:limited": "node scripts/update-data.mjs --mode=limited --dry-run=true --verbose",
-    "update-data:test": "node scripts/update-data.mjs --mode=mock --dry-run=true --verbose",
+    "update-data:test": "node scripts/update-data-fixed.mjs --mode=mock --dry-run=true --verbose",
     "update-data:prices": "node scripts/update-data.mjs --type=prices --mode=mock --dry-run=false",
     "update-data:stock": "node scripts/update-data.mjs --type=stock --mode=mock --dry-run=false",
     "update-data:new": "node scripts/update-data.mjs --type=new_products --mode=mock --dry-run=false",
@@ -30,6 +30,9 @@
     "phase2:status": "echo 'Phase 2 DataFetcher Implementation Status: COMPLETE'"
   },
   "dependencies": {
+    "@react-three/drei": "^10.6.1",
+    "@react-three/fiber": "^9.3.0",
+    "@types/three": "^0.179.0",
     "axios": "^1.11.0",
     "cheerio": "^1.1.2",
     "dotenv": "^17.2.1",
@@ -38,6 +41,7 @@
     "puppeteer": "^24.15.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "three": "^0.179.1",
     "zustand": "^5.0.6"
   },
   "devDependencies": {

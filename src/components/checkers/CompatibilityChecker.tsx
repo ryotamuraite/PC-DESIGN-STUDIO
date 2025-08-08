@@ -7,7 +7,11 @@ import {
   Info,
   RefreshCw,
   ChevronDown,
-  ChevronUp 
+  ChevronUp,
+  Zap,
+  Monitor,
+  BarChart3,
+  Gamepad2
 } from 'lucide-react';
 import { PCConfiguration } from '@/types';
 import { useCompatibilityCheck } from '@/hooks/useCompatibilityCheck';
@@ -133,6 +137,15 @@ export const CompatibilityChecker: React.FC<CompatibilityCheckerProps> = ({
           />
         </div>
 
+        {/* パフォーマンス予測表示 (NEW!) */}
+        {compatibilityResult.details?.performancePrediction && (
+          <PerformancePredictionCard 
+            prediction={compatibilityResult.details.performancePrediction}
+            isExpanded={expandedSections.has('performance')}
+            onToggle={() => toggleSection('performance')}
+          />
+        )}
+
         {/* 総合判定 */}
         <div className={`rounded-lg p-4 ${
           isCompatible ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
@@ -219,6 +232,187 @@ export const CompatibilityChecker: React.FC<CompatibilityCheckerProps> = ({
 };
 
 export default CompatibilityChecker;
+
+// パフォーマンス予測カード (NEW!)
+const PerformancePredictionCard: React.FC<{
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  prediction: any;
+  isExpanded: boolean;
+  onToggle: () => void;
+}> = ({ prediction, isExpanded, onToggle }) => {
+  const { overallScore, bottleneckAnalysis, gamingPerformance, useCaseScores } = prediction;
+  
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-green-600';
+    if (score >= 60) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+  
+  const getBottleneckColor = (severity: string) => {
+    switch(severity) {
+      case 'severe': return 'text-red-600';
+      case 'moderate': return 'text-yellow-600';
+      default: return 'text-green-600';
+    }
+  };
+
+  return (
+    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+      <button
+        onClick={onToggle}
+        className="w-full p-4 flex items-center justify-between hover:bg-blue-50 hover:bg-opacity-50"
+      >
+        <div className="flex items-center">
+          <Zap className="w-5 h-5 text-blue-600 mr-2" />
+          <h3 className="text-sm font-medium text-gray-900">
+            パフォーマンス予測 (総合スコア: {overallScore}点)
+          </h3>
+        </div>
+        {isExpanded ? (
+          <ChevronUp className="w-4 h-4 text-gray-500" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-gray-500" />
+        )}
+      </button>
+      
+      {/* 簡易表示 (常に表示) */}
+      <div className="px-4 pb-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="text-center">
+            <div className="text-xs text-gray-600">ボトルネック</div>
+            <div className={`text-sm font-medium ${getBottleneckColor(bottleneckAnalysis.severity)}`}>
+              {bottleneckAnalysis.severity === 'none' ? 'なし' : 
+               bottleneckAnalysis.bottleneckType === 'cpu' ? 'CPU' :
+               bottleneckAnalysis.bottleneckType === 'gpu' ? 'GPU' : 'バランス'}
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-gray-600">1440p FPS</div>
+            <div className="text-sm font-medium text-blue-600">
+              {gamingPerformance.averageFps['1440p'] || '無'}
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-gray-600">推奨解像度</div>
+            <div className="text-sm font-medium text-purple-600">
+              {gamingPerformance.recommendedResolution}
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-gray-600">性能クラス</div>
+            <div className="text-sm font-medium text-indigo-600">
+              {gamingPerformance.performanceClass}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* 詳細表示 */}
+      {isExpanded && (
+        <div className="px-4 pb-4 space-y-4">
+          {/* FPS予測 */}
+          <div className="bg-white rounded p-3 border">
+            <div className="flex items-center mb-2">
+              <Monitor className="w-4 h-4 text-gray-600 mr-2" />
+              <h4 className="text-sm font-medium text-gray-900">解像度別FPS予測</h4>
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-sm">
+              <div className="text-center">
+                <div className="text-gray-600">1080p</div>
+                <div className="font-medium text-green-600">
+                  {gamingPerformance.averageFps['1080p'] || 0} FPS
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-gray-600">1440p</div>
+                <div className="font-medium text-blue-600">
+                  {gamingPerformance.averageFps['1440p'] || 0} FPS
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-gray-600">4K</div>
+                <div className="font-medium text-purple-600">
+                  {gamingPerformance.averageFps['4K'] || 0} FPS
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* 用途別スコア */}
+          <div className="bg-white rounded p-3 border">
+            <div className="flex items-center mb-2">
+              <BarChart3 className="w-4 h-4 text-gray-600 mr-2" />
+              <h4 className="text-sm font-medium text-gray-900">用途別適性スコア</h4>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">🎮 ゲーミング</span>
+                <div className="flex items-center">
+                  <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full" 
+                      style={{ width: `${useCaseScores.gaming}%` }}
+                    ></div>
+                  </div>
+                  <span className={`text-sm font-medium ${getScoreColor(useCaseScores.gaming)}`}>
+                    {useCaseScores.gaming}点
+                  </span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">🎨 コンテンツ制作</span>
+                <div className="flex items-center">
+                  <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                    <div 
+                      className="bg-green-600 h-2 rounded-full" 
+                      style={{ width: `${useCaseScores.contentCreation}%` }}
+                    ></div>
+                  </div>
+                  <span className={`text-sm font-medium ${getScoreColor(useCaseScores.contentCreation)}`}>
+                    {useCaseScores.contentCreation}点
+                  </span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">💼 ワークステーション</span>
+                <div className="flex items-center">
+                  <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                    <div 
+                      className="bg-purple-600 h-2 rounded-full" 
+                      style={{ width: `${useCaseScores.workstation}%` }}
+                    ></div>
+                  </div>
+                  <span className={`text-sm font-medium ${getScoreColor(useCaseScores.workstation)}`}>
+                    {useCaseScores.workstation}点
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* 推奨事項 */}
+          {prediction.recommendations && prediction.recommendations.length > 0 && (
+            <div className="bg-white rounded p-3 border">
+              <div className="flex items-center mb-2">
+                <Gamepad2 className="w-4 h-4 text-gray-600 mr-2" />
+                <h4 className="text-sm font-medium text-gray-900">最適化推奨</h4>
+              </div>
+              <div className="space-y-2">
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {prediction.recommendations.slice(0, 2).map((rec: any, index: number) => (
+                  <div key={index} className="text-xs text-gray-600 bg-gray-50 rounded p-2">
+                    <div className="font-medium text-gray-900">{rec.title}</div>
+                    <div className="text-blue-600">{rec.expectedImprovement}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // スコアカードコンポーネント
 const CompatibilityScoreCard: React.FC<{

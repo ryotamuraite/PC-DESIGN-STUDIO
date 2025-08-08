@@ -1,4 +1,6 @@
 // src/components/summary/ConfigSummary.tsx
+// 互換性チェック機能統合版ConfigSummary
+
 import React from 'react';
 import { 
   CheckCircle, 
@@ -8,8 +10,8 @@ import {
   Info,
   Minus
 } from 'lucide-react';
-import { PCConfiguration } from '@/types';
-import { useCompatibilityCheck } from '@/hooks/useCompatibilityCheck';
+import type { PCConfiguration, PartCategory, Part } from '@/types';
+import { useCompatibilityCheck } from '@/hooks/compatibility/useCompatibilityCheck';
 
 interface ConfigSummaryProps {
   configuration: PCConfiguration;
@@ -20,8 +22,23 @@ export const ConfigSummary: React.FC<ConfigSummaryProps> = ({
   configuration, 
   className = '' 
 }) => {
+  // PCConfiguration から Partial<Record<PartCategory, Part>> に変換（null除去）
+  const currentParts: Partial<Record<PartCategory, Part>> = {};
+  Object.entries(configuration.parts || {}).forEach(([category, part]) => {
+    if (part !== null && part !== undefined) {
+      currentParts[category as PartCategory] = part;
+    }
+  });
+
   // 互換性チェック結果を取得
-  const { compatibilityResult, isChecking } = useCompatibilityCheck(configuration);
+  const { 
+    compatibilityResult, 
+    isFullyCompatible,
+    hasCriticalIssues,
+    hasWarnings,
+    compatibilityScore,
+    getStatusForCheck 
+  } = useCompatibilityCheck(currentParts);
 
   // 電源計算関連（既存のロジック）
   const totalPowerConsumption = calculateTotalPower(configuration);
@@ -31,6 +48,11 @@ export const ConfigSummary: React.FC<ConfigSummaryProps> = ({
   const isPowerAdequate = psuWattage >= recommendedWattage;
   const powerUsagePercentage = psuWattage > 0 ? (totalPowerConsumption / psuWattage) * 100 : 0;
   const powerMargin = psuWattage - totalPowerConsumption;
+
+  // 各互換性チェック項目の状態を取得
+  const cpuSocketStatus = getStatusForCheck('cpuSocket');
+  const memoryTypeStatus = getStatusForCheck('memoryType');
+  const powerAdequacyStatus = getStatusForCheck('powerAdequacy');
 
   return (
     <div className={`bg-white rounded-lg shadow-sm border p-6 ${className}`}>
@@ -122,209 +144,172 @@ export const ConfigSummary: React.FC<ConfigSummaryProps> = ({
           )}
         </div>
 
-        {/* 互換性チェック */}
+        {/* 互換性チェック（新機能統合版） */}
         <div className="bg-gray-50 rounded-md p-4">
           <div className="flex items-center gap-2 mb-3">
-            {isChecking ? (
-              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            ) : compatibilityResult?.isCompatible ? (
+            {isFullyCompatible ? (
               <CheckCircle className="w-4 h-4 text-green-500" />
-            ) : compatibilityResult && !compatibilityResult.isCompatible ? (
+            ) : hasCriticalIssues ? (
               <XCircle className="w-4 h-4 text-red-500" />
+            ) : hasWarnings ? (
+              <AlertTriangle className="w-4 h-4 text-yellow-500" />
             ) : (
               <Info className="w-4 h-4 text-gray-400" />
             )}
             <span className="font-medium text-sm">互換性チェック</span>
-            {compatibilityResult && (
-              <span className={`text-xs px-2 py-1 rounded ${
-                compatibilityResult.score >= 90 ? 'bg-green-100 text-green-700' :
-                compatibilityResult.score >= 70 ? 'bg-yellow-100 text-yellow-700' :
-                'bg-red-100 text-red-700'
-              }`}>
-                {compatibilityResult.score}点
-              </span>
-            )}
+            <span className={`text-xs px-2 py-1 rounded font-medium ${
+              compatibilityScore >= 90 ? 'bg-green-100 text-green-700' :
+              compatibilityScore >= 70 ? 'bg-yellow-100 text-yellow-700' :
+              compatibilityScore >= 50 ? 'bg-orange-100 text-orange-700' :
+              'bg-red-100 text-red-700'
+            }`}>
+              {compatibilityScore}点
+            </span>
           </div>
           
-          {isChecking ? (
-            <p className="text-sm text-gray-600">互換性をチェック中...</p>
-          ) : compatibilityResult ? (
-            <div className="space-y-2">
-              {/* 互換性ステータス */}
-              <div className={`text-sm font-medium ${
-                compatibilityResult.isCompatible ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {compatibilityResult.isCompatible ? 
-                  '✓ 互換性に問題はありません' : 
-                  '⚠ 互換性に問題があります'
-                }
-              </div>
+          <div className="space-y-2">
+            {/* 全体ステータス */}
+            <div className={`text-sm font-medium ${
+              isFullyCompatible ? 'text-green-600' : 
+              hasCriticalIssues ? 'text-red-600' : 'text-yellow-600'
+            }`}>
+              {isFullyCompatible ? 
+                '✅ 互換性に問題はありません' : 
+                hasCriticalIssues ? '❌ 重要な互換性問題があります' :
+                '⚠️ 互換性に注意が必要です'
+              }
+            </div>
 
-              {/* 詳細情報 */}
-              <div className="space-y-1 text-sm text-gray-600">
-                <CompatibilityItem
-                  label="CPUソケット"
-                  status={compatibilityResult.details.cpuSocket.compatible}
-                  message={compatibilityResult.details.cpuSocket.message}
-                  configuration={configuration}
-                />
-                <CompatibilityItem
-                  label="メモリ規格"
-                  status={compatibilityResult.details.memoryType.compatible}
-                  message={compatibilityResult.details.memoryType.message}
-                  configuration={configuration}
-                />
-                <CompatibilityItem
-                  label="電源コネクタ"
-                  status={compatibilityResult.details.powerConnectors.compatible}
-                  message={compatibilityResult.details.powerConnectors.message}
-                  configuration={configuration}
-                />
-                <CompatibilityItem
-                  label="ケースサイズ"
-                  status={compatibilityResult.details.physicalFit.compatible}
-                  message={compatibilityResult.details.physicalFit.message}
-                  configuration={configuration}
-                />
-                <CompatibilityItem
-                  label="性能バランス"
-                  status={compatibilityResult.details.performanceMatch.balanced}
-                  message={compatibilityResult.details.performanceMatch.message}
-                  configuration={configuration}
-                />
-              </div>
+            {/* 詳細チェック項目 */}
+            <div className="space-y-1 text-sm">
+              <CompatibilityStatusItem
+                label="CPUソケット"
+                status={cpuSocketStatus}
+              />
+              <CompatibilityStatusItem
+                label="メモリ規格"
+                status={memoryTypeStatus}
+              />
+              <CompatibilityStatusItem
+                label="電源容量"
+                status={powerAdequacyStatus}
+              />
+            </div>
 
-              {/* 重要な問題がある場合の警告 */}
-              {!compatibilityResult.isCompatible && (
-                <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-sm">
-                  <div className="font-medium text-red-800 mb-1">
-                    {compatibilityResult.issues.filter(i => i.severity === 'critical').length}件の重要な問題
-                  </div>
+            {/* 重要な問題がある場合の詳細表示 */}
+            {hasCriticalIssues && (
+              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded">
+                <div className="font-medium text-red-800 mb-2 text-sm">
+                  解決が必要な問題:
+                </div>
+                <div className="space-y-1">
                   {compatibilityResult.issues
                     .filter(issue => issue.severity === 'critical')
+                    .slice(0, 3)
+                    .map((issue, index) => (
+                      <div key={index} className="text-red-700 text-sm">
+                        • {issue.message}
+                        {issue.solution && (
+                          <div className="text-red-600 text-xs mt-1 ml-2">
+                            💡 {issue.solution}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  }
+                </div>
+              </div>
+            )}
+
+            {/* 警告がある場合の表示 */}
+            {hasWarnings && !hasCriticalIssues && (
+              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                <div className="font-medium text-yellow-800 mb-2 text-sm">
+                  推奨改善事項:
+                </div>
+                <div className="space-y-1">
+                  {compatibilityResult.issues
+                    .filter(issue => issue.severity === 'warning')
                     .slice(0, 2)
                     .map((issue, index) => (
-                      <div key={index} className="text-red-700">
+                      <div key={index} className="text-yellow-700 text-sm">
                         • {issue.message}
                       </div>
                     ))
                   }
-                  {compatibilityResult.issues.filter(i => i.severity === 'critical').length > 2 && (
-                    <div className="text-red-600 mt-1 text-xs">
-                      他 {compatibilityResult.issues.filter(i => i.severity === 'critical').length - 2}件...
-                    </div>
-                  )}
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-1 text-sm text-gray-600">
-              <div className="flex justify-between">
-                <span>CPUソケット:</span>
-                <span className="text-gray-400">パーツ選択中...</span>
               </div>
-              <div className="flex justify-between">
-                <span>メモリ規格:</span>
-                <span className="text-gray-400">パーツ選択中...</span>
-              </div>
-              <div className="flex justify-between">
-                <span>ケースサイズ:</span>
-                <span className="text-gray-400">パーツ選択中...</span>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-// 互換性項目表示コンポーネント
-const CompatibilityItem: React.FC<{
+// 互換性ステータス表示コンポーネント
+const CompatibilityStatusItem: React.FC<{
   label: string;
-  status: boolean;
-  message: string;
-  configuration: PCConfiguration;
-}> = ({ label, status, message, configuration }) => {
-  // 未選択状態のチェック
-  const isPending = message.includes('待っています');
-  
-  // 実際に不足しているパーツの取得
-  const getMissingParts = (label: string, config: PCConfiguration): string => {
-    const missingParts: string[] = [];
-    
-    switch (label) {
-      case 'CPUソケット':
-        if (!config.parts.cpu) missingParts.push('CPU');
-        if (!config.parts.motherboard) missingParts.push('マザーボード');
-        break;
-      case 'メモリ規格':
-        if (!config.parts.memory) missingParts.push('メモリ');
-        if (!config.parts.motherboard) missingParts.push('マザーボード');
-        break;
-      case '電源コネクタ':
-        if (!config.parts.psu) missingParts.push('電源ユニット');
-        break;
-      case 'ケースサイズ':
-        if (!config.parts.case) missingParts.push('PCケース');
-        break;
-      case '性能バランス':
-        if (!config.parts.cpu) missingParts.push('CPU');
-        if (!config.parts.gpu) missingParts.push('GPU');
-        break;
-    }
-    
-    if (missingParts.length === 0) return '';
-    if (missingParts.length === 1) return `${missingParts[0]}が必要`;
-    return `${missingParts.join('、')}が必要`;
+  status: {
+    status: 'compatible' | 'incompatible' | 'warning' | 'unknown';
+    message: string;
+    icon: '✅' | '❌' | '⚠️' | '❓';
   };
-  
+}> = ({ label, status }) => {
+  const getStatusColor = () => {
+    switch (status.status) {
+      case 'compatible':
+        return 'text-green-600';
+      case 'incompatible':
+        return 'text-red-600';
+      case 'warning':
+        return 'text-yellow-600';
+      default:
+        return 'text-gray-500';
+    }
+  };
+
+  const getIcon = () => {
+    switch (status.status) {
+      case 'compatible':
+        return <CheckCircle className="w-3 h-3 text-green-500" />;
+      case 'incompatible':
+        return <XCircle className="w-3 h-3 text-red-500" />;
+      case 'warning':
+        return <AlertTriangle className="w-3 h-3 text-yellow-500" />;
+      default:
+        return <Minus className="w-3 h-3 text-gray-400" />;
+    }
+  };
+
   return (
     <div className="flex justify-between items-center">
-      <span>{label}:</span>
+      <span className="text-gray-700">{label}:</span>
       <div className="flex items-center gap-1">
-        {isPending ? (
-          <>
-            <Minus className="w-3 h-3 text-gray-400" />
-            <div className="text-right">
-              <div className="text-xs text-gray-500">未選択</div>
-              {getMissingParts(label, configuration) && (
-                <div className="text-xs text-gray-400 mt-0.5">
-                  ({getMissingParts(label, configuration)})
-                </div>
-              )}
-            </div>
-          </>
-        ) : status ? (
-          <>
-            <CheckCircle className="w-3 h-3 text-green-500" />
-            <span className="text-xs text-green-600">互換</span>
-          </>
-        ) : (
-          <>
-            <XCircle className="w-3 h-3 text-red-500" />
-            <span className="text-xs text-red-600">非互換</span>
-          </>
-        )}
+        {getIcon()}
+        <span className={`text-xs ${getStatusColor()}`}>
+          {status.status === 'unknown' ? '未選択' : status.message}
+        </span>
       </div>
     </div>
   );
 };
 
-// 簡易電力計算関数（既存のロジック）
+// 電力計算関数（既存のロジックを改良）
 function calculateTotalPower(configuration: PCConfiguration): number {
   let totalPower = 0;
   
   Object.values(configuration.parts).forEach(part => {
     if (part) {
-      // 各パーツの消費電力を取得（specifications.powerまたはtdp）
-      const power = (part.specifications?.power as number) || 
-                   (part.specifications?.tdp as number) || 
-                   getDefaultPowerConsumption(part.category);
+      // powerConsumption プロパティを優先、なければデフォルト値
+      const power = part.powerConsumption || getDefaultPowerConsumption(part.category);
       totalPower += power;
     }
   });
   
+  // システムベース消費電力を追加
+  totalPower += 50; // マザーボード、ファン等
+
   return totalPower;
 }
 
@@ -337,9 +322,8 @@ function getDefaultPowerConsumption(category: string): number {
     memory: 10,
     storage: 15,
     psu: 0, // 電源自体は消費電力に含めない
-    case: 20, // ファン等
-    cooler: 15,
-    monitor: 0 // 外部デバイス
+    case: 20, // ケースファン等
+    cooling: 15,
   };
   
   return defaults[category] || 20;

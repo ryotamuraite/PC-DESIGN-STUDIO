@@ -30,3 +30,5 @@ logs/
 .cache/
 .temp/
 docs/99_Other/
+.history/
+.vscode/

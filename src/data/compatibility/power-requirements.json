@@ -1,0 +1,210 @@
+{
+  "powerConnectorRequirements": {
+    "motherboard": {
+      "ATX_24pin": {
+        "required": true,
+        "description": "メインボード電源コネクタ",
+        "voltage": "+12V, +5V, +3.3V",
+        "compatibility": ["ATX", "Micro-ATX", "Mini-ITX"]
+      },
+      "CPU_8pin": {
+        "required": true,
+        "description": "CPU補助電源（8ピン）",
+        "voltage": "+12V",
+        "alternatives": ["4+4pin", "8+4pin", "8+8pin"],
+        "highEndRequired": "8+4pin or 8+8pin"
+      },
+      "CPU_4pin": {
+        "required": false,
+        "description": "CPU補助電源（4ピン）",
+        "voltage": "+12V",
+        "usage": "エントリー向けマザーボード"
+      }
+    },
+    "gpu": {
+      "PCIe_6pin": {
+        "powerDelivery": 75,
+        "description": "PCIe 6ピン補助電源",
+        "voltage": "+12V",
+        "usedBy": ["GTX 1060", "RX 580", "RTX 3060"]
+      },
+      "PCIe_8pin": {
+        "powerDelivery": 150,
+        "description": "PCIe 8ピン（6+2ピン）補助電源",
+        "voltage": "+12V",
+        "usedBy": ["RTX 3070", "RTX 4060", "RX 6700 XT"]
+      },
+      "PCIe_8pin_dual": {
+        "powerDelivery": 300,
+        "description": "PCIe 8ピン x2 補助電源",
+        "voltage": "+12V",
+        "usedBy": ["RTX 3080", "RTX 4070", "RX 6800 XT"]
+      },
+      "PCIe_8pin_triple": {
+        "powerDelivery": 450,
+        "description": "PCIe 8ピン x3 補助電源",
+        "voltage": "+12V",
+        "usedBy": ["RTX 3090", "RTX 4080", "RX 7900 XTX"]
+      },
+      "PCIe_12pin": {
+        "powerDelivery": 600,
+        "description": "PCIe 12ピン（12VHPWR）",
+        "voltage": "+12V",
+        "usedBy": ["RTX 4090", "RTX 4080 SUPER"],
+        "note": "最新の高性能GPU用コネクタ"
+      },
+      "PCIe_16pin": {
+        "powerDelivery": 600,
+        "description": "PCIe 16ピン（12V-2x6）",
+        "voltage": "+12V",
+        "usedBy": ["RTX 5090", "RTX 5080"],
+        "note": "次世代GPU用コネクタ"
+      }
+    },
+    "storage": {
+      "SATA_power": {
+        "powerDelivery": 15,
+        "description": "SATA電源コネクタ",
+        "voltage": "+12V, +5V",
+        "usedBy": ["HDD", "SATA SSD", "光学ドライブ"]
+      },
+      "Molex_4pin": {
+        "powerDelivery": 50,
+        "description": "4ピンペリフェラル電源",
+        "voltage": "+12V, +5V",
+        "usedBy": ["古いHDD", "ファン", "光学ドライブ"]
+      }
+    }
+  },
+  "powerSupplyConnectors": {
+    "budget_psu": {
+      "range": "400W-600W",
+      "connectors": {
+        "24pin": 1,
+        "8pin_cpu": 1,
+        "6pin_pcie": 1,
+        "8pin_pcie": 1,
+        "sata": 4,
+        "molex": 2
+      },
+      "supportedGPU": ["RTX 3060", "RTX 4060", "RX 6600", "RX 7600"]
+    },
+    "mainstream_psu": {
+      "range": "650W-850W",
+      "connectors": {
+        "24pin": 1,
+        "8pin_cpu": 1,
+        "4+4pin_cpu": 1,
+        "6pin_pcie": 2,
+        "8pin_pcie": 2,
+        "sata": 6,
+        "molex": 3
+      },
+      "supportedGPU": ["RTX 3070", "RTX 4070", "RX 6700 XT", "RX 7700 XT"]
+    },
+    "highend_psu": {
+      "range": "1000W-1200W",
+      "connectors": {
+        "24pin": 1,
+        "8pin_cpu": 2,
+        "4+4pin_cpu": 1,
+        "6pin_pcie": 2,
+        "8pin_pcie": 4,
+        "12pin_pcie": 1,
+        "sata": 8,
+        "molex": 4
+      },
+      "supportedGPU": ["RTX 3080", "RTX 4080", "RTX 4090", "RX 6900 XT", "RX 7900 XTX"]
+    },
+    "enthusiast_psu": {
+      "range": "1300W+",
+      "connectors": {
+        "24pin": 1,
+        "8pin_cpu": 2,
+        "4+4pin_cpu": 2,
+        "6pin_pcie": 4,
+        "8pin_pcie": 6,
+        "12pin_pcie": 2,
+        "16pin_pcie": 1,
+        "sata": 10,
+        "molex": 6
+      },
+      "supportedGPU": ["RTX 4090", "RTX 5090", "Dual GPU setups"]
+    }
+  },
+  "gpuPowerRequirements": {
+    "RTX 4090": {
+      "connectors": ["12pin_pcie"],
+      "totalPowerDraw": 450,
+      "recommendedPSU": 850,
+      "minimumPSU": 750
+    },
+    "RTX 4080": {
+      "connectors": ["8pin_pcie", "8pin_pcie"],
+      "totalPowerDraw": 320,
+      "recommendedPSU": 750,
+      "minimumPSU": 650
+    },
+    "RTX 4070": {
+      "connectors": ["8pin_pcie"],
+      "totalPowerDraw": 200,
+      "recommendedPSU": 650,
+      "minimumPSU": 550
+    },
+    "RTX 4060": {
+      "connectors": ["8pin_pcie"],
+      "totalPowerDraw": 115,
+      "recommendedPSU": 550,
+      "minimumPSU": 450
+    },
+    "RX 7900 XTX": {
+      "connectors": ["8pin_pcie", "8pin_pcie"],
+      "totalPowerDraw": 355,
+      "recommendedPSU": 800,
+      "minimumPSU": 700
+    },
+    "RX 7700 XT": {
+      "connectors": ["8pin_pcie", "6pin_pcie"],
+      "totalPowerDraw": 245,
+      "recommendedPSU": 700,
+      "minimumPSU": 600
+    }
+  },
+  "compatibilityChecks": [
+    {
+      "check": "connector_availability",
+      "description": "必要なコネクタが電源ユニットに存在するかチェック"
+    },
+    {
+      "check": "power_capacity",
+      "description": "電源容量がシステム要件を満たすかチェック"
+    },
+    {
+      "check": "efficiency_rating",
+      "description": "80 PLUS認証レベルの確認"
+    },
+    {
+      "check": "modular_compatibility",
+      "description": "モジュラー電源のケーブル互換性確認"
+    }
+  ],
+  "troubleshooting": {
+    "insufficient_connectors": {
+      "problem": "必要なコネクタが不足",
+      "solutions": [
+        "より高容量の電源ユニットに変更",
+        "モジュラーケーブルを追加購入",
+        "変換アダプタ使用（非推奨）"
+      ]
+    },
+    "power_insufficient": {
+      "problem": "電源容量不足",
+      "solutions": [
+        "推奨容量以上の電源ユニットに変更",
+        "消費電力の少ないパーツに変更"
+      ]
+    }
+  },
+  "lastUpdated": "2025-08-05T12:00:00Z",
+  "version": "1.0.0"
+}

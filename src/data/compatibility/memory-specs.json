@@ -1,0 +1,165 @@
+{
+  "memoryCompatibility": {
+    "DDR5": {
+      "description": "最新のDDR5メモリ規格",
+      "supportedSockets": ["LGA1700", "AM5"],
+      "supportedChipsets": [
+        "Z790", "Z690", "B760", "B660", "H770", "H670",
+        "X670E", "X670", "B650E", "B650", "A620"
+      ],
+      "standardSpeeds": [4800, 5200, 5600, 6000, 6400, 6800, 7200, 7600, 8000],
+      "jedecStandard": [4800, 5600],
+      "overclockingSpeeds": [6000, 6400, 6800, 7200, 7600, 8000, 8400],
+      "capacities": [8, 16, 32, 64],
+      "maxCapacityPerModule": 64,
+      "maxTotalCapacity": {
+        "mainstream": 128,
+        "highEnd": 192,
+        "workstation": 256
+      },
+      "voltage": {
+        "jedec": 1.1,
+        "overclocking": "1.25-1.4"
+      },
+      "recommendedConfigurations": [
+        {
+          "useCase": "Gaming",
+          "capacity": 32,
+          "speed": 6000,
+          "modules": 2,
+          "description": "ゲーミング用推奨構成"
+        },
+        {
+          "useCase": "Content Creation",
+          "capacity": 64,
+          "speed": 6400,
+          "modules": 2,
+          "description": "動画編集・3DCG用推奨構成"
+        },
+        {
+          "useCase": "Professional Workstation",
+          "capacity": 128,
+          "speed": 5600,
+          "modules": 4,
+          "description": "プロフェッショナル用途推奨構成"
+        }
+      ]
+    },
+    "DDR4": {
+      "description": "従来のDDR4メモリ規格",
+      "supportedSockets": ["LGA1200", "LGA1151", "AM4", "TR4"],
+      "supportedChipsets": [
+        "Z590", "Z490", "B560", "B460", "H570", "H470", "H410",
+        "Z390", "Z370", "B365", "H370", "H310",
+        "X570", "X470", "B550", "B450", "A520", "A320",
+        "TRX40", "X399"
+      ],
+      "standardSpeeds": [2133, 2400, 2666, 2933, 3200, 3600, 4000, 4400, 4800],
+      "jedecStandard": [2133, 2400, 2666, 2933, 3200],
+      "overclockingSpeeds": [3600, 4000, 4400, 4800, 5000, 5200],
+      "capacities": [4, 8, 16, 32, 64],
+      "maxCapacityPerModule": 64,
+      "maxTotalCapacity": {
+        "mainstream": 128,
+        "highEnd": 256,
+        "workstation": 512
+      },
+      "voltage": {
+        "jedec": 1.2,
+        "overclocking": "1.35-1.5"
+      },
+      "recommendedConfigurations": [
+        {
+          "useCase": "Gaming",
+          "capacity": 16,
+          "speed": 3200,
+          "modules": 2,
+          "description": "ゲーミング用標準構成"
+        },
+        {
+          "useCase": "Gaming High-End",
+          "capacity": 32,
+          "speed": 3600,
+          "modules": 2,
+          "description": "ゲーミング用高性能構成"
+        },
+        {
+          "useCase": "Content Creation",
+          "capacity": 64,
+          "speed": 3200,
+          "modules": 4,
+          "description": "クリエイター用推奨構成"
+        },
+        {
+          "useCase": "Budget Build",
+          "capacity": 16,
+          "speed": 2666,
+          "modules": 2,
+          "description": "エントリー向け構成"
+        }
+      ]
+    }
+  },
+  "timingCompatibility": {
+    "DDR5": {
+      "commonTimings": {
+        "4800": "40-40-40-77",
+        "5200": "42-42-42-82",
+        "5600": "46-45-45-90",
+        "6000": "48-48-48-96",
+        "6400": "52-52-52-104"
+      }
+    },
+    "DDR4": {
+      "commonTimings": {
+        "2666": "19-19-19-43",
+        "3200": "16-18-18-36",
+        "3600": "18-19-19-39",
+        "4000": "19-19-19-39"
+      }
+    }
+  },
+  "memorySlotConfiguration": {
+    "dual_channel": {
+      "slots": [1, 3],
+      "description": "メインストリーム向けデュアルチャンネル構成",
+      "supportedCapacities": [8, 16, 32, 64, 128],
+      "recommendedPopulation": "2 modules"
+    },
+    "quad_channel": {
+      "slots": [1, 2, 3, 4],
+      "description": "ワークステーション向けクアッドチャンネル構成",
+      "supportedCapacities": [16, 32, 64, 128, 256],
+      "recommendedPopulation": "4 modules"
+    }
+  },
+  "compatibilityIssues": [
+    {
+      "issue": "DDR5 on DDR4 motherboard",
+      "severity": "critical",
+      "message": "DDR5メモリはDDR4対応マザーボードでは使用できません"
+    },
+    {
+      "issue": "DDR4 on DDR5 motherboard", 
+      "severity": "critical",
+      "message": "DDR4メモリはDDR5対応マザーボードでは使用できません"
+    },
+    {
+      "issue": "Memory speed exceeds CPU support",
+      "severity": "warning",
+      "message": "メモリ速度がCPU仕様を超える場合、動作しない可能性があります"
+    },
+    {
+      "issue": "Single module in dual channel",
+      "severity": "warning",
+      "message": "1枚構成ではデュアルチャンネルの性能が発揮されません"
+    },
+    {
+      "issue": "Mismatched memory modules",
+      "severity": "warning",
+      "message": "異なる仕様のメモリモジュールの混在は推奨されません"
+    }
+  ],
+  "lastUpdated": "2025-08-05T12:00:00Z",
+  "version": "1.0.0"
+}

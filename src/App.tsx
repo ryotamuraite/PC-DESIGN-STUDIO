@@ -6,13 +6,15 @@ import CompatibilityChecker from '@/components/checkers/CompatibilityChecker';
 import ConfigSummary from '@/components/summary/ConfigSummary';
 import PartSearch from '@/components/search/PartSearch';
 import UpdateNotifier from '@/components/notifications/UpdateNotifier';
+import ErrorBoundary from '@/components/error/ErrorBoundary';
+import { PCCaseViewer } from '@/components/3d';
 import { useNotifications } from '@/hooks/useNotifications';
 import { sampleParts, getPartsByCategory, compatibleCombinations } from '@/data/sampleParts';
 
 // 🔧 修正: 未使用変数と型エラーを削除
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'builder' | 'power' | 'compatibility' | 'search'>('builder');
+  const [activeTab, setActiveTab] = useState<'builder' | 'power' | 'compatibility' | 'search' | '3d'>('builder');
   const { notifications, dismissNotification, success, warning } = useNotifications();
   
   const [configuration, setConfiguration] = useState<PCConfiguration>({
@@ -125,7 +127,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ヘッダー */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
@@ -163,6 +165,16 @@ const App: React.FC = () => {
                 }`}
               >
                 互換性チェック
+              </button>
+              <button
+                onClick={() => setActiveTab('3d')}
+                className={`px-3 py-2 text-sm font-medium rounded-md ${
+                  activeTab === '3d'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                3Dビュー
               </button>
               <button
                 onClick={() => setActiveTab('search')}
@@ -237,69 +249,72 @@ const App: React.FC = () => {
                   )}
                 </div>
 
-                {/* クイックテスト機能 */}
-                <div className="bg-white rounded-lg shadow-sm border p-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">クイックテスト</h2>
-                  <p className="text-sm text-gray-600 mb-4">
-                    互換性チェックのテスト用に、事前設定された構成をロードできます。
-                  </p>
-                  <div className="flex space-x-4">
-                    <button
-                      onClick={() => loadTestConfiguration('intel')}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm"
-                    >
-                      Intel構成をロード
-                    </button>
-                    <button
-                      onClick={() => loadTestConfiguration('amd')}
-                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm"
-                    >
-                      AMD構成をロード
-                    </button>
-                    <button
-                      onClick={() => {
-                        setConfiguration(prev => ({
-                          ...prev,
-                          parts: {
-                            cpu: null,
-                            gpu: null,
-                            motherboard: null,
-                            memory: null,
-                            storage: null,
-                            psu: null,
-                            case: null,
-                            cooler: null,
-                            monitor: null
-                          },
-                          totalPrice: 0
-                        }));
-                        
-                        // クリア通知を表示
-                        warning(
-                          '構成をクリアしました',
-                          'すべてのパーツが削除されました',
-                          '構成クリア'
-                        );
-                      }}
-                      className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm"
-                    >
-                      クリア
-                    </button>
+                {/* メイン構成エリア - パーツ選択メイン */}
+                <div className="space-y-6">
+                  {/* クイックテスト機能 */}
+                  <div className="bg-white rounded-lg shadow-sm border p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">クイックテスト</h2>
+                    <p className="text-sm text-gray-600 mb-4">
+                      互換性チェックのテスト用に、事前設定された構成をロードできます。右側の3Dビューで即座に確認できます。
+                    </p>
+                    <div className="flex space-x-4">
+                      <button
+                        onClick={() => loadTestConfiguration('intel')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm"
+                      >
+                        Intel構成をロード
+                      </button>
+                      <button
+                        onClick={() => loadTestConfiguration('amd')}
+                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm"
+                      >
+                        AMD構成をロード
+                      </button>
+                      <button
+                        onClick={() => {
+                          setConfiguration(prev => ({
+                            ...prev,
+                            parts: {
+                              cpu: null,
+                              gpu: null,
+                              motherboard: null,
+                              memory: null,
+                              storage: null,
+                              psu: null,
+                              case: null,
+                              cooler: null,
+                              monitor: null
+                            },
+                            totalPrice: 0
+                          }));
+                          
+                          // クリア通知を表示
+                          warning(
+                            '構成をクリアしました',
+                            'すべてのパーツが削除されました',
+                            '構成クリア'
+                          );
+                        }}
+                        className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm"
+                      >
+                        クリア
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                {/* 簡易パーツ選択 */}
-                <div className="bg-white rounded-lg shadow-sm border p-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">パーツ選択</h2>
-                  <div className="space-y-6">
-                    {(['cpu', 'motherboard', 'memory', 'gpu', 'psu', 'case'] as PartCategory[]).map(category => (
-                      <PartSelector
-                        key={category}
-                        category={category}
-                        selectedPart={configuration.parts[category] || null} // 🔧 undefinedをnullに変換
-                        onSelect={(part) => selectPart(category, part)}
-                      />
-                    ))}
+                  {/* パーツ選択 */}
+                  <div className="bg-white rounded-lg shadow-sm border p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">パーツ選択</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {(['cpu', 'motherboard', 'memory', 'gpu', 'psu', 'case'] as PartCategory[]).map(category => (
+                        <PartSelector
+                          key={category}
+                          category={category}
+                          selectedPart={configuration.parts[category] || null}
+                          onSelect={(part) => selectPart(category, part)}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -386,6 +401,84 @@ const App: React.FC = () => {
               </div>
             )}
 
+            {activeTab === '3d' && (
+              <div className="space-y-6">
+                {/* 3Dビューメイン */}
+                <ErrorBoundary componentName="3Dビュー">
+                  <div className="bg-white rounded-lg shadow-sm border p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                      🎆 3D PC構成ビュー
+                    </h2>
+                    <p className="text-sm text-gray-600 mb-4">
+                      選択したPCパーツをリアルタイムで3D表示します。マウスで回転・ズームして構成を確認できます。
+                    </p>
+                    <PCCaseViewer 
+                      configuration={configuration}
+                      className="w-full h-96"
+                      showGrid={true}
+                      enableControls={true}
+                    />
+                  </div>
+                </ErrorBoundary>
+
+                {/* 3Dビュー操作ガイド */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* 操作方法 */}
+                  <div className="bg-purple-50 rounded-lg p-6">
+                    <h3 className="text-sm font-semibold text-purple-900 mb-3">
+                      🎮 3Dビュー操作方法
+                    </h3>
+                    <ul className="text-sm text-purple-800 space-y-2">
+                      <li>• ドラッグ: ケースを回転</li>
+                      <li>• ホイール: ズームイン/アウト</li>
+                      <li>• 右クリック+ドラッグ: パン</li>
+                      <li>• ダブルクリック: フォーカスリセット</li>
+                    </ul>
+                  </div>
+
+                  {/* 3Dビューの特徴 */}
+                  <div className="bg-indigo-50 rounded-lg p-6">
+                    <h3 className="text-sm font-semibold text-indigo-900 mb-3">
+                      ✨ 3Dビューの特徴
+                    </h3>
+                    <ul className="text-sm text-indigo-800 space-y-2">
+                      <li>• リアルタイムパーツ表示</li>
+                      <li>• サイズ感と配置確認</li>
+                      <li>• パーツ情報ホバー表示</li>
+                      <li>• 互換性問題の視覚化</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* 3D機能状態 */}
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                    🚀 3D可視化システム状態
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">
+                        {Object.values(configuration.parts).filter(Boolean).length}
+                      </div>
+                      <div className="text-gray-600">表示中パーツ</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">60</div>
+                      <div className="text-gray-600">FPS</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-600">3D</div>
+                      <div className="text-gray-600">レンダリング</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-orange-600">✓</div>
+                      <div className="text-gray-600">互換性連動</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'search' && (
               <div className="space-y-6">
                 {/* パーツ検索コンポーネント */}
@@ -431,11 +524,37 @@ const App: React.FC = () => {
 
           {/* サイドバー（構成サマリー & 通知） */}
           <div className="lg:col-span-1">
-            <div className="sticky top-8 space-y-6">
-              <ConfigSummary 
-                configuration={configuration}
-                className="w-full"
-              />
+            <div className="sticky top-20 space-y-6">
+              {/* 3Dビューをサマリー最上部に移動 */}
+              <ErrorBoundary componentName="3Dビュー">
+                <div className="bg-white rounded-lg shadow-sm border p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-md font-semibold text-gray-900">
+                      🎆 3Dビュー
+                    </h3>
+                    <div className="text-xs text-gray-500">
+                      パーツ: {Object.values(configuration.parts).filter(Boolean).length}/9
+                    </div>
+                  </div>
+                  <PCCaseViewer 
+                    configuration={configuration}
+                    className="w-full h-64"
+                    showGrid={true}
+                    enableControls={true}
+                    cameraPosition={[3.5, 3.5, 3.5]}
+                  />
+                  <div className="mt-2 text-xs text-gray-600">
+                    ドラッグ: 回転 | ホイール: ズーム | 右クリック: パン
+                  </div>
+                </div>
+              </ErrorBoundary>
+              
+              <ErrorBoundary componentName="構成サマリー">
+                <ConfigSummary 
+                  configuration={configuration}
+                  className="w-full"
+                />
+              </ErrorBoundary>
               
               {/* 更新通知パネル */}
               <div className="bg-white rounded-lg shadow-sm border p-4">

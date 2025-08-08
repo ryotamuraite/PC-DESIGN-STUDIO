@@ -1,0 +1,507 @@
+{
+  "cpuPerformanceData": {
+    "Intel Core i9-14900K": {
+      "cores": 24,
+      "pCores": 8,
+      "eCores": 16,
+      "baseClockP": 3.2,
+      "boostClockP": 6.0,
+      "benchmarkScores": {
+        "singleCore": 2250,
+        "multiCore": 41500,
+        "gaming": 185,
+        "productivity": 195
+      },
+      "tier": "flagship",
+      "socket": "LGA1700",
+      "powerDraw": 125,
+      "generation": "14th",
+      "architecture": "Raptor Lake Refresh"
+    },
+    "Intel Core i7-14700K": {
+      "cores": 20,
+      "pCores": 8,
+      "eCores": 12,
+      "baseClockP": 3.4,
+      "boostClockP": 5.6,
+      "benchmarkScores": {
+        "singleCore": 2200,
+        "multiCore": 35000,
+        "gaming": 180,
+        "productivity": 175
+      },
+      "tier": "high-end",
+      "socket": "LGA1700",
+      "powerDraw": 125,
+      "generation": "14th",
+      "architecture": "Raptor Lake Refresh"
+    },
+    "Intel Core i5-14600K": {
+      "cores": 14,
+      "pCores": 6,
+      "eCores": 8,
+      "baseClockP": 3.5,
+      "boostClockP": 5.3,
+      "benchmarkScores": {
+        "singleCore": 2150,
+        "multiCore": 25000,
+        "gaming": 170,
+        "productivity": 150
+      },
+      "tier": "mainstream",
+      "socket": "LGA1700",
+      "powerDraw": 125,
+      "generation": "14th",
+      "architecture": "Raptor Lake Refresh"
+    },
+    "AMD Ryzen 9 7950X": {
+      "cores": 16,
+      "pCores": 16,
+      "eCores": 0,
+      "baseClockP": 4.5,
+      "boostClockP": 5.7,
+      "benchmarkScores": {
+        "singleCore": 2050,
+        "multiCore": 38000,
+        "gaming": 175,
+        "productivity": 200
+      },
+      "tier": "flagship",
+      "socket": "AM5",
+      "powerDraw": 170,
+      "generation": "7000",
+      "architecture": "Zen 4"
+    },
+    "AMD Ryzen 7 7800X3D": {
+      "cores": 8,
+      "pCores": 8,
+      "eCores": 0,
+      "baseClockP": 4.2,
+      "boostClockP": 5.0,
+      "benchmarkScores": {
+        "singleCore": 1950,
+        "multiCore": 19500,
+        "gaming": 195,
+        "productivity": 140
+      },
+      "tier": "gaming-optimized",
+      "socket": "AM5",
+      "powerDraw": 120,
+      "generation": "7000",
+      "architecture": "Zen 4 3D V-Cache",
+      "specialFeatures": ["3D V-Cache", "Gaming Optimized"]
+    },
+    "AMD Ryzen 7 7700X": {
+      "cores": 8,
+      "pCores": 8,
+      "eCores": 0,
+      "baseClockP": 4.5,
+      "boostClockP": 5.4,
+      "benchmarkScores": {
+        "singleCore": 2000,
+        "multiCore": 20000,
+        "gaming": 170,
+        "productivity": 155
+      },
+      "tier": "high-end",
+      "socket": "AM5",
+      "powerDraw": 105,
+      "generation": "7000",
+      "architecture": "Zen 4"
+    },
+    "AMD Ryzen 5 7600X": {
+      "cores": 6,
+      "pCores": 6,
+      "eCores": 0,
+      "baseClockP": 4.7,
+      "boostClockP": 5.3,
+      "benchmarkScores": {
+        "singleCore": 1980,
+        "multiCore": 15500,
+        "gaming": 165,
+        "productivity": 130
+      },
+      "tier": "mainstream",
+      "socket": "AM5",
+      "powerDraw": 105,
+      "generation": "7000",
+      "architecture": "Zen 4"
+    }
+  },
+  "gpuPerformanceData": {
+    "RTX 4090": {
+      "vram": 24,
+      "architecture": "Ada Lovelace",
+      "manufactureProcess": "4nm",
+      "rtCores": 128,
+      "cudaCores": 16384,
+      "benchmarkScores": {
+        "1080p": 195,
+        "1440p": 185,
+        "4K": 165,
+        "rayTracing": 190,
+        "dlss": 200,
+        "productivity": 200
+      },
+      "tier": "flagship",
+      "powerDraw": 450,
+      "performance4K": 165,
+      "performance1440p": 185,
+      "performance1080p": 195,
+      "recommendedResolution": "4K",
+      "targetFramerate": {
+        "1080p": "120+ FPS",
+        "1440p": "100+ FPS", 
+        "4K": "60+ FPS"
+      }
+    },
+    "RTX 4080": {
+      "vram": 16,
+      "architecture": "Ada Lovelace",
+      "manufactureProcess": "4nm",
+      "rtCores": 76,
+      "cudaCores": 9728,
+      "benchmarkScores": {
+        "1080p": 180,
+        "1440p": 170,
+        "4K": 135,
+        "rayTracing": 165,
+        "dlss": 180,
+        "productivity": 170
+      },
+      "tier": "high-end",
+      "powerDraw": 320,
+      "performance4K": 135,
+      "performance1440p": 170,
+      "performance1080p": 180,
+      "recommendedResolution": "1440p",
+      "targetFramerate": {
+        "1080p": "100+ FPS",
+        "1440p": "80+ FPS",
+        "4K": "45+ FPS"
+      }
+    },
+    "RTX 4070": {
+      "vram": 12,
+      "architecture": "Ada Lovelace",
+      "manufactureProcess": "4nm",
+      "rtCores": 46,
+      "cudaCores": 5888,
+      "benchmarkScores": {
+        "1080p": 165,
+        "1440p": 145,
+        "4K": 95,
+        "rayTracing": 135,
+        "dlss": 155,
+        "productivity": 140
+      },
+      "tier": "mainstream-high",
+      "powerDraw": 200,
+      "performance4K": 95,
+      "performance1440p": 145,
+      "performance1080p": 165,
+      "recommendedResolution": "1440p",
+      "targetFramerate": {
+        "1080p": "80+ FPS",
+        "1440p": "60+ FPS",
+        "4K": "30+ FPS"
+      }
+    },
+    "RTX 4060": {
+      "vram": 8,
+      "architecture": "Ada Lovelace",
+      "manufactureProcess": "4nm",
+      "rtCores": 24,
+      "cudaCores": 3072,
+      "benchmarkScores": {
+        "1080p": 140,
+        "1440p": 105,
+        "4K": 65,
+        "rayTracing": 100,
+        "dlss": 125,
+        "productivity": 110
+      },
+      "tier": "mainstream",
+      "powerDraw": 115,
+      "performance4K": 65,
+      "performance1440p": 105,
+      "performance1080p": 140,
+      "recommendedResolution": "1080p",
+      "targetFramerate": {
+        "1080p": "60+ FPS",
+        "1440p": "45+ FPS",
+        "4K": "25+ FPS"
+      }
+    },
+    "RX 7900 XTX": {
+      "vram": 24,
+      "architecture": "RDNA 3",
+      "manufactureProcess": "5nm",
+      "rtCores": 96,
+      "streamProcessors": 6144,
+      "benchmarkScores": {
+        "1080p": 190,
+        "1440p": 175,
+        "4K": 145,
+        "rayTracing": 140,
+        "fsr": 170,
+        "productivity": 165
+      },
+      "tier": "high-end",
+      "powerDraw": 355,
+      "performance4K": 145,
+      "performance1440p": 175,
+      "performance1080p": 190,
+      "recommendedResolution": "1440p",
+      "targetFramerate": {
+        "1080p": "100+ FPS",
+        "1440p": "75+ FPS",
+        "4K": "50+ FPS"
+      }
+    },
+    "RX 7700 XT": {
+      "vram": 12,
+      "architecture": "RDNA 3",
+      "manufactureProcess": "5nm",
+      "rtCores": 54,
+      "streamProcessors": 3456,
+      "benchmarkScores": {
+        "1080p": 155,
+        "1440p": 135,
+        "4K": 85,
+        "rayTracing": 110,
+        "fsr": 140,
+        "productivity": 125
+      },
+      "tier": "mainstream-high",
+      "powerDraw": 245,
+      "performance4K": 85,
+      "performance1440p": 135,
+      "performance1080p": 155,
+      "recommendedResolution": "1440p",
+      "targetFramerate": {
+        "1080p": "70+ FPS",
+        "1440p": "55+ FPS",
+        "4K": "30+ FPS"
+      }
+    }
+  },
+  "gamePerformanceProfiles": {
+    "Cyberpunk 2077": {
+      "cpuDemand": "high",
+      "gpuDemand": "very_high",
+      "ramDemand": "high",
+      "rayTracingSupport": true,
+      "dlssSupport": true,
+      "fsrSupport": true,
+      "performanceMultipliers": {
+        "1080p": 0.85,
+        "1440p": 0.80,
+        "4K": 0.75
+      },
+      "cpuBottleneckThreshold": 150,
+      "recommendedSpecs": {
+        "1080p": { "cpu": 160, "gpu": 130 },
+        "1440p": { "cpu": 170, "gpu": 150 },
+        "4K": { "cpu": 180, "gpu": 170 }
+      }
+    },
+    "Fortnite": {
+      "cpuDemand": "medium",
+      "gpuDemand": "medium",
+      "ramDemand": "medium",
+      "rayTracingSupport": false,
+      "dlssSupport": true,
+      "fsrSupport": false,
+      "performanceMultipliers": {
+        "1080p": 1.15,
+        "1440p": 1.10,
+        "4K": 1.05
+      },
+      "cpuBottleneckThreshold": 140,
+      "recommendedSpecs": {
+        "1080p": { "cpu": 120, "gpu": 90 },
+        "1440p": { "cpu": 130, "gpu": 110 },
+        "4K": { "cpu": 140, "gpu": 140 }
+      }
+    },
+    "Call of Duty: Modern Warfare III": {
+      "cpuDemand": "high",
+      "gpuDemand": "high",
+      "ramDemand": "high",
+      "rayTracingSupport": false,
+      "dlssSupport": true,
+      "fsrSupport": true,
+      "performanceMultipliers": {
+        "1080p": 1.05,
+        "1440p": 1.00,
+        "4K": 0.95
+      },
+      "cpuBottleneckThreshold": 160,
+      "recommendedSpecs": {
+        "1080p": { "cpu": 150, "gpu": 120 },
+        "1440p": { "cpu": 160, "gpu": 140 },
+        "4K": { "cpu": 170, "gpu": 160 }
+      }
+    },
+    "Valorant": {
+      "cpuDemand": "medium",
+      "gpuDemand": "low",
+      "ramDemand": "low",
+      "rayTracingSupport": false,
+      "dlssSupport": false,
+      "fsrSupport": false,
+      "performanceMultipliers": {
+        "1080p": 1.25,
+        "1440p": 1.20,
+        "4K": 1.15
+      },
+      "cpuBottleneckThreshold": 120,
+      "recommendedSpecs": {
+        "1080p": { "cpu": 100, "gpu": 70 },
+        "1440p": { "cpu": 110, "gpu": 85 },
+        "4K": { "cpu": 120, "gpu": 100 }
+      }
+    },
+    "Red Dead Redemption 2": {
+      "cpuDemand": "high",
+      "gpuDemand": "very_high",
+      "ramDemand": "high",
+      "rayTracingSupport": false,
+      "dlssSupport": true,
+      "fsrSupport": true,
+      "performanceMultipliers": {
+        "1080p": 0.90,
+        "1440p": 0.85,
+        "4K": 0.80
+      },
+      "cpuBottleneckThreshold": 155,
+      "recommendedSpecs": {
+        "1080p": { "cpu": 150, "gpu": 125 },
+        "1440p": { "cpu": 160, "gpu": 145 },
+        "4K": { "cpu": 170, "gpu": 165 }
+      }
+    }
+  },
+  "bottleneckAnalysis": {
+    "thresholds": {
+      "severe_cpu_bottleneck": 0.6,
+      "moderate_cpu_bottleneck": 0.75,
+      "balanced": 0.9,
+      "moderate_gpu_bottleneck": 1.25,
+      "severe_gpu_bottleneck": 1.5
+    },
+    "resolutionFactors": {
+      "1080p": {
+        "cpuWeight": 0.7,
+        "gpuWeight": 0.3
+      },
+      "1440p": {
+        "cpuWeight": 0.5,
+        "gpuWeight": 0.5
+      },
+      "4K": {
+        "cpuWeight": 0.3,
+        "gpuWeight": 0.7
+      }
+    }
+  },
+  "useCaseProfiles": {
+    "gaming": {
+      "priorities": {
+        "cpuSingleCore": 0.4,
+        "cpuMultiCore": 0.2,
+        "gpuPerformance": 0.8,
+        "ramCapacity": 0.3,
+        "ramSpeed": 0.2
+      },
+      "minimumSpecs": {
+        "cpuScore": 120,
+        "gpuScore": 100,
+        "ramCapacity": 16
+      },
+      "recommendedSpecs": {
+        "cpuScore": 160,
+        "gpuScore": 140,
+        "ramCapacity": 32
+      },
+      "idealSpecs": {
+        "cpuScore": 180,
+        "gpuScore": 170,
+        "ramCapacity": 32
+      }
+    },
+    "content_creation": {
+      "priorities": {
+        "cpuSingleCore": 0.3,
+        "cpuMultiCore": 0.7,
+        "gpuPerformance": 0.6,
+        "ramCapacity": 0.8,
+        "ramSpeed": 0.4
+      },
+      "minimumSpecs": {
+        "cpuScore": 140,
+        "gpuScore": 110,
+        "ramCapacity": 32
+      },
+      "recommendedSpecs": {
+        "cpuScore": 170,
+        "gpuScore": 150,
+        "ramCapacity": 64
+      },
+      "idealSpecs": {
+        "cpuScore": 200,
+        "gpuScore": 180,
+        "ramCapacity": 128
+      }
+    },
+    "workstation": {
+      "priorities": {
+        "cpuSingleCore": 0.2,
+        "cpuMultiCore": 0.8,
+        "gpuPerformance": 0.4,
+        "ramCapacity": 1.0,
+        "ramSpeed": 0.3
+      },
+      "minimumSpecs": {
+        "cpuScore": 160,
+        "gpuScore": 120,
+        "ramCapacity": 64
+      },
+      "recommendedSpecs": {
+        "cpuScore": 180,
+        "gpuScore": 160,
+        "ramCapacity": 128
+      },
+      "idealSpecs": {
+        "cpuScore": 200,
+        "gpuScore": 180,
+        "ramCapacity": 256
+      }
+    }
+  },
+  "performancePredictionRules": [
+    {
+      "rule": "cpu_gpu_ratio",
+      "description": "CPU-GPU性能バランスの評価",
+      "weight": 0.4
+    },
+    {
+      "rule": "resolution_optimization",
+      "description": "解像度別の最適化評価",
+      "weight": 0.3
+    },
+    {
+      "rule": "memory_adequacy",
+      "description": "メモリ容量・速度の適切性評価",
+      "weight": 0.2
+    },
+    {
+      "rule": "thermal_considerations",
+      "description": "熱設計の妥当性評価",
+      "weight": 0.1
+    }
+  ],
+  "lastUpdated": "2025-08-05T14:00:00Z",
+  "version": "1.0.0"
+}
