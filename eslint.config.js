@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 import stylistic from '@stylistic/eslint-plugin';
 
 export default tseslint.config([
-  { ignores: ['dist'] },
+  { ignores: ['dist', '.history/**', 'node_modules/**', '.vscode/**', '.cache/**', '.temp/**'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],

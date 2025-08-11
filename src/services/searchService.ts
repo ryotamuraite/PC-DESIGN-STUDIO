@@ -172,7 +172,7 @@ class SearchService {
     // 在庫状況フィルタ
     if (filters.availability && filters.availability.length > 0) {
       result = result.filter(part => {
-        const availability = part.availability || 'in_stock';
+        const availability = (part.availability || 'in_stock') as 'in_stock' | 'out_of_stock' | 'limited' | 'discontinued' | 'pre_order';
         return filters.availability!.includes(availability as 'in_stock' | 'out_of_stock' | 'limited');
       });
     }

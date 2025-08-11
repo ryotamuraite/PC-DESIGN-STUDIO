@@ -26,14 +26,14 @@ export const PartsRenderer: React.FC<PartsRendererProps> = ({
     });
   };
 
-  // アクティブパーツの情報を収集
+  // アクティブパーツの情報を収集（ケース外側配置）
   const activeParts = [
-    { part: parts.cpu, position: [-0.3, -0.17, -0.3] as [number, number, number], name: 'CPU', color: '#3b82f6' },
-    { part: parts.gpu, position: [0.1, -0.25, -0.1] as [number, number, number], name: 'GPU', color: '#10b981' },
-    { part: parts.memory, position: [-0.1, -0.12, -0.5] as [number, number, number], name: 'Memory', color: '#8b5cf6' },
-    { part: parts.storage, position: [0.5, 0.15, 0.2] as [number, number, number], name: 'Storage', color: '#f59e0b' },
-    { part: parts.psu, position: [0.3, -0.78, -0.4] as [number, number, number], name: 'PSU', color: '#ef4444' },
-    { part: parts.cooler, position: [-0.3, 0.05, -0.3] as [number, number, number], name: 'Cooler', color: '#6b7280' },
+    { part: parts.cpu, position: [-2.2, 0.8, -0.3] as [number, number, number], name: 'CPU', color: '#3b82f6' },
+    { part: parts.gpu, position: [2.5, 0.2, 0.1] as [number, number, number], name: 'GPU', color: '#10b981' },
+    { part: parts.memory, position: [-2.0, 1.2, -0.8] as [number, number, number], name: 'Memory', color: '#8b5cf6' },
+    { part: parts.storage, position: [2.2, 1.5, 0.8] as [number, number, number], name: 'Storage', color: '#f59e0b' },
+    { part: parts.psu, position: [2.8, -0.2, -0.6] as [number, number, number], name: 'PSU', color: '#ef4444' },
+    { part: parts.cooler, position: [-2.5, 1.0, 0.5] as [number, number, number], name: 'Cooler', color: '#6b7280' },
   ].filter(item => item.part !== null && item.part !== undefined);
 
   return (
@@ -42,7 +42,7 @@ export const PartsRenderer: React.FC<PartsRendererProps> = ({
       {parts.cpu && (
         <group>
           <CPUComponent 
-            position={[-0.3, -0.17, -0.3]} 
+            position={[-2.2, 0.8, -0.3]} 
           />
         </group>
       )}
@@ -51,7 +51,7 @@ export const PartsRenderer: React.FC<PartsRendererProps> = ({
       {parts.gpu && (
         <group>
           <GPUComponent 
-            position={[0.1, -0.25, -0.1]} 
+            position={[2.5, 0.2, 0.1]} 
           />
         </group>
       )}
@@ -61,7 +61,7 @@ export const PartsRenderer: React.FC<PartsRendererProps> = ({
         <group>
           <MemoryComponent 
             memoryData={parts.memory} 
-            position={[-0.1, -0.12, -0.5]} 
+            position={[-2.0, 1.2, -0.8]} 
           />
         </group>
       )}
@@ -71,7 +71,7 @@ export const PartsRenderer: React.FC<PartsRendererProps> = ({
         <group>
           <StorageComponent 
             storageData={parts.storage} 
-            position={[0.5, 0.15, 0.2]} 
+            position={[2.2, 1.5, 0.8]} 
           />
         </group>
       )}
@@ -80,7 +80,7 @@ export const PartsRenderer: React.FC<PartsRendererProps> = ({
       {parts.psu && (
         <group>
           <PSUComponent 
-            position={[0.3, -0.78, -0.4]} 
+            position={[2.8, -0.2, -0.6]} 
           />
         </group>
       )}
@@ -89,7 +89,7 @@ export const PartsRenderer: React.FC<PartsRendererProps> = ({
       {parts.cooler && (
         <group>
           <CoolerComponent 
-            position={[-0.3, 0.05, -0.3]} 
+            position={[-2.5, 1.0, 0.5]} 
           />
         </group>
       )}

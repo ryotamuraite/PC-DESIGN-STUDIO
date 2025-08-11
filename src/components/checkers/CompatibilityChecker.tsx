@@ -1,4 +1,6 @@
 // src/components/checkers/CompatibilityChecker.tsx
+// 互換性チェッカー - 基本版（1-2時間実装用）
+
 import React, { useState } from 'react';
 import { 
   CheckCircle, 
@@ -8,10 +10,7 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
-  Zap,
-  Monitor,
-  BarChart3,
-  Gamepad2
+  Minus
 } from 'lucide-react';
 import { PCConfiguration } from '@/types';
 import { useCompatibilityCheck } from '@/hooks/useCompatibilityCheck';
@@ -29,11 +28,11 @@ export const CompatibilityChecker: React.FC<CompatibilityCheckerProps> = ({
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   const {
-    compatibilityResult,
-    isChecking,
+    result,
+    isLoading,
     error,
-    recheckCompatibility,
-    clearError
+    refresh,
+    checkSpecificCompatibility
   } = useCompatibilityCheck(configuration);
 
   // セクションの展開/折りたたみ
@@ -47,7 +46,7 @@ export const CompatibilityChecker: React.FC<CompatibilityCheckerProps> = ({
     setExpandedSections(newExpanded);
   };
 
-  if (isChecking) {
+  if (isLoading) {
     return (
       <div className={`bg-white rounded-lg shadow-sm border p-6 ${className}`}>
         <div className="flex items-center justify-center py-8">
@@ -69,7 +68,7 @@ export const CompatibilityChecker: React.FC<CompatibilityCheckerProps> = ({
           <p className="mt-2 text-sm text-red-700">{error}</p>
           <div className="mt-4">
             <button
-              onClick={() => { clearError(); recheckCompatibility(); }}
+              onClick={refresh}
               className="bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded text-sm"
             >
               再チェック
@@ -80,7 +79,7 @@ export const CompatibilityChecker: React.FC<CompatibilityCheckerProps> = ({
     );
   }
 
-  if (!compatibilityResult) {
+  if (!result) {
     return (
       <div className={`bg-white rounded-lg shadow-sm border p-6 ${className}`}>
         <div className="text-center py-8 text-gray-500">
@@ -90,7 +89,7 @@ export const CompatibilityChecker: React.FC<CompatibilityCheckerProps> = ({
     );
   }
 
-  const { isCompatible, issues, warnings, score } = compatibilityResult;
+  const { isCompatible, issues, warnings, score } = result;
 
   // 重要度別にIssueを分類
   const criticalIssues = issues.filter(issue => issue.severity === 'critical');
@@ -104,7 +103,7 @@ export const CompatibilityChecker: React.FC<CompatibilityCheckerProps> = ({
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">互換性チェック結果</h2>
           <button
-            onClick={recheckCompatibility}
+            onClick={refresh}
             className="text-blue-600 hover:text-blue-700 text-sm font-medium"
           >
             再チェック
@@ -136,15 +135,6 @@ export const CompatibilityChecker: React.FC<CompatibilityCheckerProps> = ({
             suffix="件"
           />
         </div>
-
-        {/* パフォーマンス予測表示 (NEW!) */}
-        {compatibilityResult.details?.performancePrediction && (
-          <PerformancePredictionCard 
-            prediction={compatibilityResult.details.performancePrediction}
-            isExpanded={expandedSections.has('performance')}
-            onToggle={() => toggleSection('performance')}
-          />
-        )}
 
         {/* 総合判定 */}
         <div className={`rounded-lg p-4 ${
@@ -182,11 +172,16 @@ export const CompatibilityChecker: React.FC<CompatibilityCheckerProps> = ({
         )}
 
         {/* 警告 */}
-        {warningIssues.length > 0 && (
+        {(warningIssues.length > 0 || warnings.length > 0) && (
           <CompatibilitySection
             title="警告"
             icon={<AlertTriangle className="w-5 h-5 text-yellow-500" />}
-            items={warningIssues}
+            items={[...warningIssues, ...warnings.map(w => ({ 
+              message: w.message, 
+              solution: w.recommendation,
+              severity: 'warning',
+              category: '一般的な警告'
+            }))]}
             severity="warning"
             isExpanded={expandedSections.has('warning')}
             onToggle={() => toggleSection('warning')}
@@ -223,193 +218,13 @@ export const CompatibilityChecker: React.FC<CompatibilityCheckerProps> = ({
         {/* 詳細情報 */}
         {showDetails && (
           <div className="space-y-4 pt-4 border-t border-gray-200">
-            <CompatibilityDetailsSection configuration={configuration} />
+            <CompatibilityDetailsSection 
+              result={result}
+              checkSpecificCompatibility={checkSpecificCompatibility}
+            />
           </div>
         )}
       </div>
-    </div>
-  );
-};
-
-export default CompatibilityChecker;
-
-// パフォーマンス予測カード (NEW!)
-const PerformancePredictionCard: React.FC<{
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  prediction: any;
-  isExpanded: boolean;
-  onToggle: () => void;
-}> = ({ prediction, isExpanded, onToggle }) => {
-  const { overallScore, bottleneckAnalysis, gamingPerformance, useCaseScores } = prediction;
-  
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-  
-  const getBottleneckColor = (severity: string) => {
-    switch(severity) {
-      case 'severe': return 'text-red-600';
-      case 'moderate': return 'text-yellow-600';
-      default: return 'text-green-600';
-    }
-  };
-
-  return (
-    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-      <button
-        onClick={onToggle}
-        className="w-full p-4 flex items-center justify-between hover:bg-blue-50 hover:bg-opacity-50"
-      >
-        <div className="flex items-center">
-          <Zap className="w-5 h-5 text-blue-600 mr-2" />
-          <h3 className="text-sm font-medium text-gray-900">
-            パフォーマンス予測 (総合スコア: {overallScore}点)
-          </h3>
-        </div>
-        {isExpanded ? (
-          <ChevronUp className="w-4 h-4 text-gray-500" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-gray-500" />
-        )}
-      </button>
-      
-      {/* 簡易表示 (常に表示) */}
-      <div className="px-4 pb-2">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="text-center">
-            <div className="text-xs text-gray-600">ボトルネック</div>
-            <div className={`text-sm font-medium ${getBottleneckColor(bottleneckAnalysis.severity)}`}>
-              {bottleneckAnalysis.severity === 'none' ? 'なし' : 
-               bottleneckAnalysis.bottleneckType === 'cpu' ? 'CPU' :
-               bottleneckAnalysis.bottleneckType === 'gpu' ? 'GPU' : 'バランス'}
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-xs text-gray-600">1440p FPS</div>
-            <div className="text-sm font-medium text-blue-600">
-              {gamingPerformance.averageFps['1440p'] || '無'}
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-xs text-gray-600">推奨解像度</div>
-            <div className="text-sm font-medium text-purple-600">
-              {gamingPerformance.recommendedResolution}
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-xs text-gray-600">性能クラス</div>
-            <div className="text-sm font-medium text-indigo-600">
-              {gamingPerformance.performanceClass}
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* 詳細表示 */}
-      {isExpanded && (
-        <div className="px-4 pb-4 space-y-4">
-          {/* FPS予測 */}
-          <div className="bg-white rounded p-3 border">
-            <div className="flex items-center mb-2">
-              <Monitor className="w-4 h-4 text-gray-600 mr-2" />
-              <h4 className="text-sm font-medium text-gray-900">解像度別FPS予測</h4>
-            </div>
-            <div className="grid grid-cols-3 gap-3 text-sm">
-              <div className="text-center">
-                <div className="text-gray-600">1080p</div>
-                <div className="font-medium text-green-600">
-                  {gamingPerformance.averageFps['1080p'] || 0} FPS
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-gray-600">1440p</div>
-                <div className="font-medium text-blue-600">
-                  {gamingPerformance.averageFps['1440p'] || 0} FPS
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-gray-600">4K</div>
-                <div className="font-medium text-purple-600">
-                  {gamingPerformance.averageFps['4K'] || 0} FPS
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* 用途別スコア */}
-          <div className="bg-white rounded p-3 border">
-            <div className="flex items-center mb-2">
-              <BarChart3 className="w-4 h-4 text-gray-600 mr-2" />
-              <h4 className="text-sm font-medium text-gray-900">用途別適性スコア</h4>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">🎮 ゲーミング</span>
-                <div className="flex items-center">
-                  <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full" 
-                      style={{ width: `${useCaseScores.gaming}%` }}
-                    ></div>
-                  </div>
-                  <span className={`text-sm font-medium ${getScoreColor(useCaseScores.gaming)}`}>
-                    {useCaseScores.gaming}点
-                  </span>
-                </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">🎨 コンテンツ制作</span>
-                <div className="flex items-center">
-                  <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                    <div 
-                      className="bg-green-600 h-2 rounded-full" 
-                      style={{ width: `${useCaseScores.contentCreation}%` }}
-                    ></div>
-                  </div>
-                  <span className={`text-sm font-medium ${getScoreColor(useCaseScores.contentCreation)}`}>
-                    {useCaseScores.contentCreation}点
-                  </span>
-                </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">💼 ワークステーション</span>
-                <div className="flex items-center">
-                  <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                    <div 
-                      className="bg-purple-600 h-2 rounded-full" 
-                      style={{ width: `${useCaseScores.workstation}%` }}
-                    ></div>
-                  </div>
-                  <span className={`text-sm font-medium ${getScoreColor(useCaseScores.workstation)}`}>
-                    {useCaseScores.workstation}点
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* 推奨事項 */}
-          {prediction.recommendations && prediction.recommendations.length > 0 && (
-            <div className="bg-white rounded p-3 border">
-              <div className="flex items-center mb-2">
-                <Gamepad2 className="w-4 h-4 text-gray-600 mr-2" />
-                <h4 className="text-sm font-medium text-gray-900">最適化推奨</h4>
-              </div>
-              <div className="space-y-2">
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                {prediction.recommendations.slice(0, 2).map((rec: any, index: number) => (
-                  <div key={index} className="text-xs text-gray-600 bg-gray-50 rounded p-2">
-                    <div className="font-medium text-gray-900">{rec.title}</div>
-                    <div className="text-blue-600">{rec.expectedImprovement}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };
@@ -500,6 +315,11 @@ const CompatibilitySection: React.FC<{
                   解決策: {item.solution}
                 </p>
               )}
+              {item.category && (
+                <p className="text-xs text-gray-500 mt-1">
+                  カテゴリ: {item.category}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -510,50 +330,111 @@ const CompatibilitySection: React.FC<{
 
 // 詳細情報セクション
 const CompatibilityDetailsSection: React.FC<{
-  configuration: PCConfiguration;
-}> = ({ configuration }) => {
-  // 設定からの詳細情報を表示
-  const coolerSpecs = configuration.parts.cooler?.specifications;
-  const gpuSpecs = configuration.parts.gpu?.specifications;
+  result: {
+    details?: {
+      cpuSocket?: { message?: string };
+      memoryType?: { message?: string };
+      powerConnectors?: { message?: string };
+      physicalFit?: { message?: string };
+      performanceMatch?: { message?: string };
+    };
+  };
+  checkSpecificCompatibility: (category: string) => boolean;
+}> = ({ result, checkSpecificCompatibility }) => {
+  const details = result.details;
   
-  const hasAdvancedCooling = coolerSpecs?.type === 'liquid' || coolerSpecs?.coolingType === 'liquid';
-  const hasHighEndGPU = gpuSpecs?.tier === 'high-end' || gpuSpecs?.category === 'high-end';
+  const checkItems = [
+    {
+      label: 'CPUソケット',
+      category: 'socket',
+      details: details?.cpuSocket,
+      description: 'CPUとマザーボードのソケット互換性'
+    },
+    {
+      label: 'メモリ規格',
+      category: 'memory',
+      details: details?.memoryType,
+      description: 'メモリとマザーボードの規格互換性'
+    },
+    {
+      label: '電源コネクタ',
+      category: 'power',
+      details: details?.powerConnectors,
+      description: '電源ユニットのコネクタ互換性'
+    },
+    {
+      label: '物理サイズ',
+      category: 'physical',
+      details: details?.physicalFit,
+      description: 'ケース内での物理的な配置可能性'
+    },
+    {
+      label: 'パフォーマンスバランス',
+      category: 'performance',
+      details: details?.performanceMatch,
+      description: 'CPUとGPUのパフォーマンスバランス'
+    }
+  ];
   
   return (
     <div className="bg-gray-50 rounded-lg p-4">
       <h4 className="text-sm font-medium text-gray-900 mb-3">
         詳細な互換性チェック項目
       </h4>
-      <div className="space-y-2 text-sm text-gray-600">
-        <div className="flex justify-between">
-          <span>CPUソケット互換性:</span>
-          <span className="text-green-600">✓ 確認済み</span>
-        </div>
-        <div className="flex justify-between">
-          <span>メモリ規格互換性:</span>
-          <span className="text-green-600">✓ 確認済み</span>
-        </div>
-        <div className="flex justify-between">
-          <span>電源コネクタ互換性:</span>
-          <span className="text-green-600">✓ 確認済み</span>
-        </div>
-        <div className="flex justify-between">
-          <span>ケースサイズ互換性:</span>
-          <span className={hasHighEndGPU ? "text-yellow-600" : "text-green-600"}>
-            {hasHighEndGPU ? "⚠ 注意が必要" : "✓ 確認済み"}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span>冷却クリアランス:</span>
-          <span className={hasAdvancedCooling ? "text-green-600" : "text-yellow-600"}>
-            {hasAdvancedCooling ? "✓ 確認済み" : "⚠ 注意が必要"}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span>PCIe互換性:</span>
-          <span className="text-green-600">✓ 確認済み</span>
-        </div>
+      <div className="space-y-3">
+        {checkItems.map((item) => {
+          const isCompatible = checkSpecificCompatibility(item.category);
+          const hasDetails = item.details && !item.details.message?.includes('待っています');
+          
+          return (
+            <div key={item.category} className="bg-white rounded p-3 border">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center">
+                    {hasDetails ? (
+                      isCompatible ? (
+                        <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-red-500 mr-2" />
+                      )
+                    ) : (
+                      <Minus className="w-4 h-4 text-gray-400 mr-2" />
+                    )}
+                    <span className="text-sm font-medium text-gray-900">
+                      {item.label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {item.description}
+                  </p>
+                  {item.details?.message && (
+                    <p className="text-xs text-gray-700 mt-1 font-medium">
+                      {item.details.message}
+                    </p>
+                  )}
+                </div>
+                <div className="ml-4">
+                  {hasDetails ? (
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      isCompatible 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {isCompatible ? '互換' : '非互換'}
+                    </span>
+                  ) : (
+                    <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600">
+                      未選択
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 };
+
+export default CompatibilityChecker;

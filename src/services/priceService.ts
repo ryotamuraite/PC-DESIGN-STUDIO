@@ -441,8 +441,8 @@ class PriceService {
     return (avgReliability * 0.7) + (sourceCount * 0.3);
   }
 
-  private generateMockPriceSource(sourceName: string, _partId: string, _part?: Part): PriceSource { // 🔧 未使用引数に_追加
-    const basePrice = _part?.price || 10000; // 🔧 part → _part に修正
+  private generateMockPriceSource(sourceName: string, _partId: string, part?: Part): PriceSource {
+    const basePrice = part?.price || 10000;
     const variation = (Math.random() - 0.5) * 0.1; // ±5%
     const price = Math.round(basePrice * (1 + variation));
 

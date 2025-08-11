@@ -1,25 +1,149 @@
-// src/App.tsx
-import React, { useState } from 'react';
-import { PCConfiguration, Part, PartCategory } from '@/types';
-import PowerCalculator from '@/components/calculators/PowerCalculator';
-import CompatibilityChecker from '@/components/checkers/CompatibilityChecker';
-import ConfigSummary from '@/components/summary/ConfigSummary';
-import PartSearch from '@/components/search/PartSearch';
-import UpdateNotifier from '@/components/notifications/UpdateNotifier';
-import ErrorBoundary from '@/components/error/ErrorBoundary';
-import { PCCaseViewer } from '@/components/3d';
-import { useNotifications } from '@/hooks/useNotifications';
-import { sampleParts, getPartsByCategory, compatibleCombinations } from '@/data/sampleParts';
+// src/App.tsx - 広告エリア確保設計実装版
+import { PCCaseViewer } from "@/components/3d";
+import PowerCalculator from "@/components/calculators/PowerCalculator";
+import CompatibilityChecker from "@/components/checkers/CompatibilityChecker";
+import ErrorBoundary from "@/components/error/ErrorBoundary";
+import { FigmaIntegratedDashboard } from "@/components/integrated";
+import PartSearch from "@/components/search/PartSearch";
+import ConfigSummary from "@/components/summary/ConfigSummary";
+import {
+  compatibleCombinations,
+  getPartsByCategory,
+  sampleParts,
+} from "@/data/sampleParts";
+import { useNotifications } from "@/hooks/useNotifications";
+import { PCConfiguration, Part, PartCategory } from "@/types";
+import React, { useState } from "react";
+// 🎨 ロゴファイルのimport - Viteベースパス対応
+import logoSvg from "/assets/logo.svg";
 
-// 🔧 修正: 未使用変数と型エラーを削除
+// 統合ダッシュボード用の型定義
+type TabType =
+  | "builder"
+  | "power"
+  | "compatibility"
+  | "search"
+  | "3d"
+  | "integrated";
+
+// 🎯 新機能: 広告エリアコンポーネント
+const AdArea: React.FC<{ className?: string }> = ({ className = "" }) => {
+  return (
+    <div className={`space-y-4 ${className}`}>
+      {/* 広告プレースホルダー1 */}
+      <div className="bg-gradient-to-br from-orange-100 to-red-100 border-2 border-dashed border-orange-300 rounded-lg p-6 text-center">
+        <div className="text-sm font-semibold text-orange-800 mb-2">
+          📢 広告エリア A
+        </div>
+        <div className="text-xs text-orange-600 mb-3">
+          推奨パーツ・セール情報等
+        </div>
+        <div className="w-full h-24 bg-white rounded-md flex items-center justify-center">
+          <span className="text-gray-400 text-xs">320×100 Banner</span>
+        </div>
+      </div>
+
+      {/* 広告プレースホルダー2 */}
+      <div className="bg-gradient-to-br from-green-100 to-emerald-100 border-2 border-dashed border-green-300 rounded-lg p-6 text-center">
+        <div className="text-sm font-semibold text-green-800 mb-2">
+          🛒 広告エリア B
+        </div>
+        <div className="text-xs text-green-600 mb-3">
+          関連商品・アフィリエイト等
+        </div>
+        <div className="w-full h-32 bg-white rounded-md flex items-center justify-center">
+          <span className="text-gray-400 text-xs">320×128 Banner</span>
+        </div>
+      </div>
+
+      {/* 広告プレースホルダー3 */}
+      <div className="bg-gradient-to-br from-purple-100 to-indigo-100 border-2 border-dashed border-purple-300 rounded-lg p-6 text-center">
+        <div className="text-sm font-semibold text-purple-800 mb-2">
+          💡 広告エリア C
+        </div>
+        <div className="text-xs text-purple-600 mb-3">
+          スポンサー・協賛企業等
+        </div>
+        <div className="w-full h-40 bg-white rounded-md flex items-center justify-center">
+          <span className="text-gray-400 text-xs">320×160 Banner</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 🎯 新機能: モバイル用フッター広告エリア
+const MobileAdArea: React.FC = () => {
+  return (
+    <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-t border-gray-200 p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <div className="text-sm font-semibold text-blue-800 mb-1">
+            🎯 おすすめパーツ情報
+          </div>
+          <div className="text-xs text-blue-600">
+            最新セール・キャンペーン情報をチェック
+          </div>
+        </div>
+        <div className="ml-4">
+          <div className="w-16 h-16 bg-white rounded-lg border-2 border-dashed border-blue-300 flex items-center justify-center">
+            <span className="text-gray-400 text-xs">AD</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'builder' | 'power' | 'compatibility' | 'search' | '3d'>('builder');
-  const { notifications, dismissNotification, success, warning } = useNotifications();
-  
+  const [activeTab, setActiveTab] = useState<TabType>("builder");
+  const { success, warning } = useNotifications();
+
+  // 📱 レスポンシブ状態管理
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileSummaryOpen, setIsMobileSummaryOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+
+  // 📱 レスポンシブ検知
+  React.useEffect(() => {
+    const checkScreenSize = () => {
+      const width = window.innerWidth;
+      setIsMobile(width <= 768);
+      setIsTablet(width > 768 && width <= 1024);
+    };
+
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
+
+  // 📱 レスポンシブ制御関数
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+
+  const toggleMobileSummary = () => {
+    setIsMobileSummaryOpen(!isMobileSummaryOpen);
+  };
+
+  const closeMobileSummary = () => {
+    setIsMobileSummaryOpen(false);
+  };
+
+  // タブ切り替え時にモバイルメニューを閉じる
+  const handleTabSwitch = (tab: TabType) => {
+    setActiveTab(tab);
+    closeMobileMenu();
+  };
+
   const [configuration, setConfiguration] = useState<PCConfiguration>({
-    id: 'config-1',
-    name: 'My PC Build',
+    id: "config-1",
+    name: "My PC Build",
     parts: {
       cpu: null,
       gpu: null,
@@ -29,29 +153,29 @@ const App: React.FC = () => {
       psu: null,
       case: null,
       cooler: null,
-      monitor: null
+      monitor: null,
     },
     totalPrice: 0,
     budget: 150000,
     createdAt: new Date(),
     updatedAt: new Date(),
-    description: '',
-    tags: []
+    description: "",
+    tags: [],
   });
 
   // カテゴリ表示名を取得
   const getCategoryDisplayName = (category: PartCategory): string => {
     const categoryNames: Record<PartCategory, string> = {
-      cpu: 'CPU',
-      motherboard: 'マザーボード',
-      memory: 'メモリ',
-      storage: 'ストレージ',
-      gpu: 'グラフィックボード',
-      psu: '電源ユニット',
-      case: 'PCケース',
-      cooler: 'CPUクーラー',
-      monitor: 'モニター',
-      other: 'その他'
+      cpu: "CPU",
+      motherboard: "マザーボード",
+      memory: "メモリ",
+      storage: "ストレージ",
+      gpu: "グラフィックボード",
+      psu: "電源ユニット",
+      case: "PCケース",
+      cooler: "CPUクーラー",
+      monitor: "モニター",
+      other: "その他",
     };
     return categoryNames[category];
   };
@@ -60,28 +184,31 @@ const App: React.FC = () => {
   const selectPart = (category: PartCategory, part: Part | null) => {
     setConfiguration(prev => {
       const newParts = { ...prev.parts, [category]: part };
-      const totalPrice = Object.values(newParts).reduce((sum, p) => sum + (p?.price || 0), 0);
-      
+      const totalPrice = Object.values(newParts).reduce(
+        (sum, p) => sum + (p?.price || 0),
+        0
+      );
+
       // 通知表示
       if (part) {
         success(
-          'パーツを選択しました',
+          "パーツを選択しました",
           `${getCategoryDisplayName(category)}: ${part.name}`,
-          'パーツ選択'
+          "パーツ選択"
         );
       } else {
         warning(
-          'パーツを削除しました',
+          "パーツを削除しました",
           `${getCategoryDisplayName(category)}を削除しました`,
-          'パーツ削除'
+          "パーツ削除"
         );
       }
-      
+
       return {
         ...prev,
         parts: newParts,
         totalPrice,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
     });
   };
@@ -90,11 +217,11 @@ const App: React.FC = () => {
   const handlePartSelect = (part: Part) => {
     selectPart(part.category, part);
     // 検索タブから構成作成タブに移動
-    setActiveTab('builder');
+    setActiveTab("builder");
   };
 
   // テスト用構成ロード
-  const loadTestConfiguration = (configType: 'intel' | 'amd') => {
+  const loadTestConfiguration = (configType: "intel" | "amd") => {
     const testConfig = compatibleCombinations[configType];
     const newParts: Partial<Record<PartCategory, Part>> = {};
     let totalPrice = 0;
@@ -113,469 +240,814 @@ const App: React.FC = () => {
       ...prev,
       parts: newParts,
       totalPrice,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     }));
-    
+
     // 成功通知を表示
     success(
       `${configType.toUpperCase()}構成をロードしました`,
       `${loadedCount}件のパーツを読み込みました（合計: ¥${totalPrice.toLocaleString()}）`,
-      '構成ロード'
+      "構成ロード"
     );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ヘッダー */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-bold text-gray-900">MyBuild PC Config</h1>
+    <div className="w-screen h-screen flex flex-col bg-gray-50 overflow-hidden">
+      {/* 統一ヘッダー（全画面共通・固定） */}
+      <header className="bg-white shadow-sm border-b z-50 flex-shrink-0">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-20">
+            <div className="flex items-center space-x-4">
+              {/* 🎨 PC DESIGN STUDIOロゴ - レスポンシブ対応 */}
+              <div className="flex items-center space-x-3">
+                {/* メインロゴ - 全画面で表示 */}
+                <div className="flex items-center">
+                  <img 
+                    src={logoSvg}
+                    alt="PC DESIGN STUDIO" 
+                    className="h-8 w-auto sm:h-10 md:h-12 max-w-none"
+                    onError={(e) => {
+                      console.error('Logo failed to load:', e);
+                      e.currentTarget.style.display = 'none';
+                      // フォールバックテキストを表示
+                      const fallback = e.currentTarget.nextElementSibling;
+                      if (fallback) (fallback as HTMLElement).style.display = 'inline';
+                    }}
+                    onLoad={() => console.log('Logo loaded successfully')}
+                  />
+                  {/* フォールバックテキスト - ロゴ読み込み失敗時のみ表示 */}
+                  <span 
+                    className="text-xl font-bold text-gray-900 ml-2" 
+                    style={{ display: 'none' }}
+                  >
+                    PC DESIGN STUDIO
+                  </span>
+                </div>
+                {/* デスクトップのみサブタイトル表示 */}
+                <div className="hidden lg:block">
+                  <p className="text-sm text-slate-500">
+                    自作PC構成設計ツール
+                  </p>
+                </div>
+              </div>
             </div>
-            
-            {/* タブナビゲーション */}
-            <nav className="flex space-x-8">
-              <button
-                onClick={() => setActiveTab('builder')}
-                className={`px-3 py-2 text-sm font-medium rounded-md ${
-                  activeTab === 'builder'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                構成作成
-              </button>
-              <button
-                onClick={() => setActiveTab('power')}
-                className={`px-3 py-2 text-sm font-medium rounded-md ${
-                  activeTab === 'power'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                電力計算
-              </button>
-              <button
-                onClick={() => setActiveTab('compatibility')}
-                className={`px-3 py-2 text-sm font-medium rounded-md ${
-                  activeTab === 'compatibility'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                互換性チェック
-              </button>
-              <button
-                onClick={() => setActiveTab('3d')}
-                className={`px-3 py-2 text-sm font-medium rounded-md ${
-                  activeTab === '3d'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                3Dビュー
-              </button>
-              <button
-                onClick={() => setActiveTab('search')}
-                className={`px-3 py-2 text-sm font-medium rounded-md ${
-                  activeTab === 'search'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                パーツ検索
-              </button>
-            </nav>
+
+            {/* 📱 レスポンシブナビゲーション */}
+            {/* デスクトップナビゲーション (1024px以上) */}
+            {!isMobile && !isTablet && (
+              <nav className="flex space-x-8">
+                <button
+                  onClick={() => handleTabSwitch("integrated")}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                    (activeTab as TabType) === "integrated"
+                      ? "bg-cyan-100 text-cyan-700"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  ダッシュボード
+                </button>
+                <button
+                  onClick={() => handleTabSwitch("builder")}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                    (activeTab as TabType) === "builder"
+                      ? "bg-blue-100 text-blue-700"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  構成作成
+                </button>
+                <button
+                  onClick={() => handleTabSwitch("power")}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                    (activeTab as TabType) === "power"
+                      ? "bg-blue-100 text-blue-700"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  電力計算
+                </button>
+                <button
+                  onClick={() => handleTabSwitch("compatibility")}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                    (activeTab as TabType) === "compatibility"
+                      ? "bg-blue-100 text-blue-700"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  互換性チェック
+                </button>
+                <button
+                  onClick={() => handleTabSwitch("search")}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                    (activeTab as TabType) === "search"
+                      ? "bg-blue-100 text-blue-700"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  パーツ検索
+                </button>
+              </nav>
+            )}
+
+            {/* モバイルナビゲーション (1024px以下) */}
+            {(isMobile || isTablet) && (
+              <div className="relative">
+                <button
+                  onClick={toggleMobileMenu}
+                  className="flex items-center px-3 py-2 border rounded text-gray-500 border-gray-600 hover:text-gray-400 hover:border-gray-500 focus-visible"
+                  aria-expanded={isMobileMenuOpen}
+                  aria-label="メニューを開く"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
+                  </svg>
+                </button>
+
+                {/* モバイルドロップダウンメニュー */}
+                {isMobileMenuOpen && (
+                  <>
+                    {/* 背景オーバーレイ */}
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={closeMobileMenu}
+                      aria-hidden="true"
+                    />
+
+                    {/* ドロップダウンメニュー */}
+                    <div className="absolute right-0 top-12 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border">
+                      <button
+                        onClick={() => handleTabSwitch("integrated")}
+                        className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left ${
+                          (activeTab as TabType) === "integrated"
+                            ? "bg-cyan-50 text-cyan-700 font-medium"
+                            : ""
+                        }`}
+                      >
+                        🎨 ダッシュボード
+                      </button>
+                      <button
+                        onClick={() => handleTabSwitch("builder")}
+                        className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left ${
+                          (activeTab as TabType) === "builder"
+                            ? "bg-blue-50 text-blue-700 font-medium"
+                            : ""
+                        }`}
+                      >
+                        🔧 構成作成
+                      </button>
+                      <button
+                        onClick={() => handleTabSwitch("power")}
+                        className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left ${
+                          (activeTab as TabType) === "power"
+                            ? "bg-blue-50 text-blue-700 font-medium"
+                            : ""
+                        }`}
+                      >
+                        ⚡ 電力計算
+                      </button>
+                      <button
+                        onClick={() => handleTabSwitch("compatibility")}
+                        className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left ${
+                          (activeTab as TabType) === "compatibility"
+                            ? "bg-blue-50 text-blue-700 font-medium"
+                            : ""
+                        }`}
+                      >
+                        ✅ 互換性チェック
+                      </button>
+                      <button
+                        onClick={() => handleTabSwitch("search")}
+                        className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left ${
+                          (activeTab as TabType) === "search"
+                            ? "bg-blue-50 text-blue-700 font-medium"
+                            : ""
+                        }`}
+                      >
+                        🔍 パーツ検索
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* 構成状態インジケーター（統合版） */}
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-gray-600">
+                パーツ数:{" "}
+                {Object.values(configuration.parts).filter(Boolean).length}/9
+              </div>
+              <div className="text-sm font-medium text-gray-900">
+                ¥{configuration.totalPrice.toLocaleString()}
+              </div>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* メインコンテンツ */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* メインエリア */}
-          <div className="lg:col-span-2">
-            {activeTab === 'builder' && (
-              <div className="space-y-6">
-                {/* 予算設定 */}
-                <div className="bg-white rounded-lg shadow-sm border p-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">予算設定</h2>
-                  <div className="flex items-center space-x-4">
-                    <label className="text-sm font-medium text-gray-700">
-                      予算上限:
-                    </label>
-                    <input
-                      type="number"
-                      value={configuration.budget || ''}
-                      onChange={(e) => {
-                        const newBudget = parseInt(e.target.value) || 0;
-                        setConfiguration(prev => ({
-                          ...prev,
-                          budget: newBudget
-                        }));
-                        // 予算変更通知
-                        if (newBudget > 0) {
-                          success(
-                            '予算を設定しました',
-                            `予算上限: ¥${newBudget.toLocaleString()}`,
-                            '予算設定'
-                          );
-                        }
-                      }}
-                      className="border border-gray-300 rounded-md px-3 py-1 text-sm w-32"
-                      placeholder="150000"
-                    />
-                    <span className="text-sm text-gray-600">円</span>
-                  </div>
-                  
-                  {configuration.budget && (
-                    <div className="mt-4">
-                      <div className="text-sm text-gray-600">
-                        現在の合計: 
-                        <span className={`ml-2 font-semibold ${
-                          configuration.totalPrice > configuration.budget ? 
-                            'text-red-600' : 'text-green-600'
-                        }`}>
-                          ¥{configuration.totalPrice.toLocaleString()}
-                          {configuration.totalPrice > configuration.budget && (
-                            <span className="ml-2">
-                              (¥{(configuration.totalPrice - configuration.budget).toLocaleString()} オーバー)
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
+      {/* 🎯 Tablet以下用の広告エリア (main直後、footer直前) */}
+      {(isMobile || isTablet) && <MobileAdArea />}
 
-                {/* メイン構成エリア - パーツ選択メイン */}
-                <div className="space-y-6">
-                  {/* クイックテスト機能 */}
-                  <div className="bg-white rounded-lg shadow-sm border p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">クイックテスト</h2>
-                    <p className="text-sm text-gray-600 mb-4">
-                      互換性チェックのテスト用に、事前設定された構成をロードできます。右側の3Dビューで即座に確認できます。
-                    </p>
-                    <div className="flex space-x-4">
-                      <button
-                        onClick={() => loadTestConfiguration('intel')}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm"
-                      >
-                        Intel構成をロード
-                      </button>
-                      <button
-                        onClick={() => loadTestConfiguration('amd')}
-                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm"
-                      >
-                        AMD構成をロード
-                      </button>
-                      <button
-                        onClick={() => {
-                          setConfiguration(prev => ({
-                            ...prev,
-                            parts: {
-                              cpu: null,
-                              gpu: null,
-                              motherboard: null,
-                              memory: null,
-                              storage: null,
-                              psu: null,
-                              case: null,
-                              cooler: null,
-                              monitor: null
-                            },
-                            totalPrice: 0
-                          }));
-                          
-                          // クリア通知を表示
-                          warning(
-                            '構成をクリアしました',
-                            'すべてのパーツが削除されました',
-                            '構成クリア'
-                          );
-                        }}
-                        className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm"
-                      >
-                        クリア
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* パーツ選択 */}
-                  <div className="bg-white rounded-lg shadow-sm border p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">パーツ選択</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {(['cpu', 'motherboard', 'memory', 'gpu', 'psu', 'case'] as PartCategory[]).map(category => (
-                        <PartSelector
-                          key={category}
-                          category={category}
-                          selectedPart={configuration.parts[category] || null}
-                          onSelect={(part) => selectPart(category, part)}
+      {/* メインコンテンツエリア（フレックス展開・スクロール制御） */}
+      <main className="flex-1 overflow-hidden">
+        {/* 📱 レスポンシブレイアウト: Desktop=3カラム, Mobile=1カラム */}
+        <div className={`h-full flex ${isMobile ? "flex-col" : "flex-row"}`}>
+          
+          {/* Main Leftエリア: タブコンテンツ表示 */}
+          <div
+            className={`overflow-hidden ${
+              isMobile ? "flex-1 w-full" : "flex-1"
+            }`}
+          >
+            {(activeTab as TabType) === "integrated" ? (
+              <FigmaIntegratedDashboard
+                configuration={configuration}
+                className="w-full h-full"
+              />
+            ) : (
+              <div className="h-full px-4 sm:px-6 lg:px-8 py-8 overflow-y-auto">
+                {(activeTab as TabType) === "builder" && (
+                  <div className="space-y-6">
+                    {/* 予算設定 */}
+                    <div className="bg-white rounded-lg shadow-sm border p-6">
+                      <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                        予算設定
+                      </h2>
+                      <div className="flex items-center space-x-4">
+                        <label className="text-sm font-medium text-gray-700">
+                          予算上限:
+                        </label>
+                        <input
+                          type="number"
+                          value={configuration.budget || ""}
+                          onChange={e => {
+                            const newBudget = parseInt(e.target.value) || 0;
+                            setConfiguration(prev => ({
+                              ...prev,
+                              budget: newBudget,
+                            }));
+                            // 予算変更通知
+                            if (newBudget > 0) {
+                              success(
+                                "予算を設定しました",
+                                `予算上限: ¥${newBudget.toLocaleString()}`,
+                                "予算設定"
+                              );
+                            }
+                          }}
+                          className="border border-gray-300 rounded-md px-3 py-1 text-sm w-32"
+                          placeholder="150000"
                         />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'power' && (
-              <div className="space-y-6">
-                {/* PowerCalculatorコンポーネント */}
-                <PowerCalculator 
-                  configuration={configuration}
-                  className="w-full"
-                />
-
-                {/* 追加情報パネル */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* 電力効率tips */}
-                  <div className="bg-blue-50 rounded-lg p-6">
-                    <h3 className="text-sm font-semibold text-blue-900 mb-3">
-                      💡 電力効率を向上させるコツ
-                    </h3>
-                    <ul className="text-sm text-blue-800 space-y-2">
-                      <li>• 80+ Gold以上の認証電源を選択する</li>
-                      <li>• 電源容量は必要量の1.2〜1.5倍程度に抑える</li>
-                      <li>• 高効率なパーツを組み合わせる</li>
-                      <li>• 適切な冷却で熱による効率低下を防ぐ</li>
-                    </ul>
-                  </div>
-
-                  {/* 環境負荷情報 */}
-                  <div className="bg-green-50 rounded-lg p-6">
-                    <h3 className="text-sm font-semibold text-green-900 mb-3">
-                      🌱 環境への影響
-                    </h3>
-                    <div className="text-sm text-green-800 space-y-2">
-                      <p>年間CO₂排出量: 約520kg</p>
-                      <p>年間電気代: 約¥15,600</p>
-                      <p className="text-xs text-green-700 mt-3">
-                        ※ 1日8時間使用、電力量料金27円/kWh、CO₂排出係数0.518kg-CO₂/kWhで計算
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'compatibility' && (
-              <div className="space-y-6">
-                {/* CompatibilityCheckerコンポーネント */}
-                <CompatibilityChecker 
-                  configuration={configuration}
-                  className="w-full"
-                />
-
-                {/* 互換性ガイド */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* 互換性チェック項目 */}
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-3">
-                      🔍 チェック項目
-                    </h3>
-                    <ul className="text-sm text-gray-700 space-y-2">
-                      <li>• CPUソケット互換性</li>
-                      <li>• メモリ規格・容量</li>
-                      <li>• 電源コネクタ</li>
-                      <li>• ケース内サイズ</li>
-                      <li>• 冷却クリアランス</li>
-                      <li>• 性能バランス</li>
-                    </ul>
-                  </div>
-
-                  {/* 互換性のコツ */}
-                  <div className="bg-yellow-50 rounded-lg p-6">
-                    <h3 className="text-sm font-semibold text-yellow-900 mb-3">
-                      💡 互換性確保のコツ
-                    </h3>
-                    <ul className="text-sm text-yellow-800 space-y-2">
-                      <li>• マザーボード選択が最重要</li>
-                      <li>• ケースサイズは余裕を持って</li>
-                      <li>• 電源容量は20%以上のマージン</li>
-                      <li>• 最新規格への対応を確認</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === '3d' && (
-              <div className="space-y-6">
-                {/* 3Dビューメイン */}
-                <ErrorBoundary componentName="3Dビュー">
-                  <div className="bg-white rounded-lg shadow-sm border p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                      🎆 3D PC構成ビュー
-                    </h2>
-                    <p className="text-sm text-gray-600 mb-4">
-                      選択したPCパーツをリアルタイムで3D表示します。マウスで回転・ズームして構成を確認できます。
-                    </p>
-                    <PCCaseViewer 
-                      configuration={configuration}
-                      className="w-full h-96"
-                      showGrid={true}
-                      enableControls={true}
-                    />
-                  </div>
-                </ErrorBoundary>
-
-                {/* 3Dビュー操作ガイド */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* 操作方法 */}
-                  <div className="bg-purple-50 rounded-lg p-6">
-                    <h3 className="text-sm font-semibold text-purple-900 mb-3">
-                      🎮 3Dビュー操作方法
-                    </h3>
-                    <ul className="text-sm text-purple-800 space-y-2">
-                      <li>• ドラッグ: ケースを回転</li>
-                      <li>• ホイール: ズームイン/アウト</li>
-                      <li>• 右クリック+ドラッグ: パン</li>
-                      <li>• ダブルクリック: フォーカスリセット</li>
-                    </ul>
-                  </div>
-
-                  {/* 3Dビューの特徴 */}
-                  <div className="bg-indigo-50 rounded-lg p-6">
-                    <h3 className="text-sm font-semibold text-indigo-900 mb-3">
-                      ✨ 3Dビューの特徴
-                    </h3>
-                    <ul className="text-sm text-indigo-800 space-y-2">
-                      <li>• リアルタイムパーツ表示</li>
-                      <li>• サイズ感と配置確認</li>
-                      <li>• パーツ情報ホバー表示</li>
-                      <li>• 互換性問題の視覚化</li>
-                    </ul>
-                  </div>
-                </div>
-
-                {/* 3D機能状態 */}
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                    🚀 3D可視化システム状態
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">
-                        {Object.values(configuration.parts).filter(Boolean).length}
+                        <span className="text-sm text-gray-600">円</span>
                       </div>
-                      <div className="text-gray-600">表示中パーツ</div>
+
+                      {configuration.budget && (
+                        <div className="mt-4">
+                          <div className="text-sm text-gray-600">
+                            現在の合計:
+                            <span
+                              className={`ml-2 font-semibold ${
+                                configuration.totalPrice > configuration.budget
+                                  ? "text-red-600"
+                                  : "text-green-600"
+                              }`}
+                            >
+                              ¥{configuration.totalPrice.toLocaleString()}
+                              {configuration.totalPrice >
+                                configuration.budget && (
+                                <span className="ml-2">
+                                  (¥
+                                  {(
+                                    configuration.totalPrice -
+                                    configuration.budget
+                                  ).toLocaleString()}{" "}
+                                  オーバー)
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">60</div>
-                      <div className="text-gray-600">FPS</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-600">3D</div>
-                      <div className="text-gray-600">レンダリング</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-orange-600">✓</div>
-                      <div className="text-gray-600">互換性連動</div>
+
+                    {/* メイン構成エリア - パーツ選択メイン */}
+                    <div className="space-y-6">
+                      {/* クイックテスト機能 */}
+                      <div className="bg-white rounded-lg shadow-sm border p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                          クイックテスト
+                        </h2>
+                        <p className="text-sm text-gray-600 mb-4">
+                          互換性チェックのテスト用に、事前設定された構成をロードできます。右側の3Dビューで即座に確認できます。
+                        </p>
+                        <div className="flex space-x-4">
+                          <button
+                            onClick={() => loadTestConfiguration("intel")}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm"
+                          >
+                            Intel構成をロード
+                          </button>
+                          <button
+                            onClick={() => loadTestConfiguration("amd")}
+                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm"
+                          >
+                            AMD構成をロード
+                          </button>
+                          <button
+                            onClick={() => {
+                              setConfiguration(prev => ({
+                                ...prev,
+                                parts: {
+                                  cpu: null,
+                                  gpu: null,
+                                  motherboard: null,
+                                  memory: null,
+                                  storage: null,
+                                  psu: null,
+                                  case: null,
+                                  cooler: null,
+                                  monitor: null,
+                                },
+                                totalPrice: 0,
+                              }));
+
+                              // クリア通知を表示
+                              warning(
+                                "構成をクリアしました",
+                                "すべてのパーツが削除されました",
+                                "構成クリア"
+                              );
+                            }}
+                            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm"
+                          >
+                            クリア
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* パーツ選択 */}
+                      <div className="bg-white rounded-lg shadow-sm border p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                          パーツ選択
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {(
+                            [
+                              "cpu",
+                              "motherboard",
+                              "memory",
+                              "gpu",
+                              "psu",
+                              "case",
+                            ] as PartCategory[]
+                          ).map(category => (
+                            <PartSelector
+                              key={category}
+                              category={category}
+                              selectedPart={
+                                configuration.parts[category] || null
+                              }
+                              onSelect={part => selectPart(category, part)}
+                            />
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
+                )}
 
-            {activeTab === 'search' && (
-              <div className="space-y-6">
-                {/* パーツ検索コンポーネント */}
-                <PartSearch
-                  onPartSelect={handlePartSelect}
-                  showAddButton={true}
-                  addButtonText="構成に追加"
-                  className="w-full"
-                  allParts={sampleParts}
-                />
+                {(activeTab as TabType) === "power" && (
+                  <div className="space-y-6">
+                    <PowerCalculator
+                      configuration={configuration}
+                      className="w-full"
+                    />
 
-                {/* 検索ガイド */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* 検索のコツ */}
-                  <div className="bg-blue-50 rounded-lg p-6">
-                    <h3 className="text-sm font-semibold text-blue-900 mb-3">
-                      🔍 検索のコツ
-                    </h3>
-                    <ul className="text-sm text-blue-800 space-y-2">
-                      <li>• 製品名、ブランド、型番で検索</li>
-                      <li>• カテゴリを選択して絞り込み</li>
-                      <li>• 複数キーワードでAND検索</li>
-                      <li>• あいまい検索に対応</li>
-                    </ul>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="bg-blue-50 rounded-lg p-6">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">
+                          💡 電力効率を向上させるコツ
+                        </h3>
+                        <ul className="text-sm text-blue-800 space-y-2">
+                          <li>• 80+ Gold以上の認証電源を選択する</li>
+                          <li>• 電源容量は必要量の1.2〜1.5倍程度に抑える</li>
+                          <li>• 高効率なパーツを組み合わせる</li>
+                          <li>• 適切な冷却で熱による効率低下を防ぐ</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-green-50 rounded-lg p-6">
+                        <h3 className="text-sm font-semibold text-green-900 mb-3">
+                          🌱 環境への影響
+                        </h3>
+                        <div className="text-sm text-green-800 space-y-2">
+                          <p>年間CO₂排出量: 約520kg</p>
+                          <p>年間電気代: 約¥15,600</p>
+                          <p className="text-xs text-green-700 mt-3">
+                            ※
+                            1日8時間使用、電力量料金27円/kWh、CO₂排出係数0.518kg-CO₂/kWhで計算
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+                )}
 
-                  {/* 選択のヒント */}
-                  <div className="bg-green-50 rounded-lg p-6">
-                    <h3 className="text-sm font-semibold text-green-900 mb-3">
-                      💡 パーツ選択のヒント
-                    </h3>
-                    <ul className="text-sm text-green-800 space-y-2">
-                      <li>• 予算と性能のバランスを考慮</li>
-                      <li>• レビューと評価を参考に</li>
-                      <li>• 在庫状況を確認</li>
-                      <li>• 構成に追加して互換性チェック</li>
-                    </ul>
+                {(activeTab as TabType) === "compatibility" && (
+                  <div className="space-y-6">
+                    <CompatibilityChecker
+                      configuration={configuration}
+                      className="w-full"
+                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="bg-gray-50 rounded-lg p-6">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                          🔍 チェック項目
+                        </h3>
+                        <ul className="text-sm text-gray-700 space-y-2">
+                          <li>• CPUソケット互換性</li>
+                          <li>• メモリ規格・容量</li>
+                          <li>• 電源コネクタ</li>
+                          <li>• ケース内サイズ</li>
+                          <li>• 冷却クリアランス</li>
+                          <li>• 性能バランス</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-yellow-50 rounded-lg p-6">
+                        <h3 className="text-sm font-semibold text-yellow-900 mb-3">
+                          💡 互換性確保のコツ
+                        </h3>
+                        <ul className="text-sm text-yellow-800 space-y-2">
+                          <li>• マザーボード選択が最重要</li>
+                          <li>• ケースサイズは余裕を持って</li>
+                          <li>• 電源容量は20%以上のマージン</li>
+                          <li>• 最新規格への対応を確認</li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {(activeTab as TabType) === "3d" && (
+                  <div className="space-y-6">
+                    <ErrorBoundary componentName="3Dビュー">
+                      <div className="bg-white rounded-lg shadow-sm border p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                          🎆 3D PC構成ビュー
+                        </h2>
+                        <p className="text-sm text-gray-600 mb-4">
+                          選択したPCパーツをリアルタイムで3D表示します。マウスで回転・ズームして構成を確認できます。
+                        </p>
+                        <PCCaseViewer
+                          configuration={configuration}
+                          className="w-full h-96"
+                          showGrid={true}
+                          enableControls={true}
+                          showUIOverlay={true}
+                        />
+                      </div>
+                    </ErrorBoundary>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="bg-purple-50 rounded-lg p-6">
+                        <h3 className="text-sm font-semibold text-purple-900 mb-3">
+                          🎮 3Dビュー操作方法
+                        </h3>
+                        <ul className="text-sm text-purple-800 space-y-2">
+                          <li>• ドラッグ: ケースを回転</li>
+                          <li>• ホイール: ズームイン/アウト</li>
+                          <li>• 右クリック+ドラッグ: パン</li>
+                          <li>• ダブルクリック: フォーカスリセット</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-indigo-50 rounded-lg p-6">
+                        <h3 className="text-sm font-semibold text-indigo-900 mb-3">
+                          ✨ 3Dビューの特徴
+                        </h3>
+                        <ul className="text-sm text-indigo-800 space-y-2">
+                          <li>• リアルタイムパーツ表示</li>
+                          <li>• サイズ感と配置確認</li>
+                          <li>• パーツ情報ホバー表示</li>
+                          <li>• 互換性問題の視覚化</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                        🚀 3D可視化システム状態
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">
+                            {
+                              Object.values(configuration.parts).filter(Boolean)
+                                .length
+                            }
+                          </div>
+                          <div className="text-gray-600">表示中パーツ</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">
+                            60
+                          </div>
+                          <div className="text-gray-600">FPS</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-purple-600">
+                            3D
+                          </div>
+                          <div className="text-gray-600">レンダリング</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-orange-600">
+                            ✓
+                          </div>
+                          <div className="text-gray-600">互換性連動</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {(activeTab as TabType) === "search" && (
+                  <div className="space-y-6">
+                    <PartSearch
+                      onPartSelect={handlePartSelect}
+                      showAddButton={true}
+                      addButtonText="構成に追加"
+                      className="w-full"
+                      allParts={sampleParts}
+                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="bg-blue-50 rounded-lg p-6">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">
+                          🔍 検索のコツ
+                        </h3>
+                        <ul className="text-sm text-blue-800 space-y-2">
+                          <li>• 製品名、ブランド、型番で検索</li>
+                          <li>• カテゴリを選択して絞り込み</li>
+                          <li>• 複数キーワードでAND検索</li>
+                          <li>• あいまい検索に対応</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-green-50 rounded-lg p-6">
+                        <h3 className="text-sm font-semibold text-green-900 mb-3">
+                          💡 パーツ選択のヒント
+                        </h3>
+                        <ul className="text-sm text-green-800 space-y-2">
+                          <li>• 予算と性能のバランスを考慮</li>
+                          <li>• レビューと評価を参考に</li>
+                          <li>• 在庫状況を確認</li>
+                          <li>• 構成に追加して互換性チェック</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* サイドバー（構成サマリー & 通知） */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-20 space-y-6">
-              {/* 3Dビューをサマリー最上部に移動 */}
-              <ErrorBoundary componentName="3Dビュー">
-                <div className="bg-white rounded-lg shadow-sm border p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-md font-semibold text-gray-900">
-                      🎆 3Dビュー
-                    </h3>
-                    <div className="text-xs text-gray-500">
-                      パーツ: {Object.values(configuration.parts).filter(Boolean).length}/9
+          {/* 🎯 Desktop用 Middle Rightエリア: 構成サマリー (w-80) */}
+          {!isMobile && !isTablet && (
+            <div className="w-80 bg-cyan-700 border-l border-gray-200 flex-shrink-0">
+              <div className="h-full p-4 space-y-6 overflow-y-auto">
+                {/* 3Dビューをサマリー最上部に移動 */}
+                {(activeTab as TabType) !== "integrated" && (
+                  <ErrorBoundary componentName="3Dビュー">
+                    <div className="rounded-lg shadow-sm">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-lg font-semibold text-white">
+                          🎆 3Dビュー
+                        </h3>
+                        <div className="text-xs text-gray-200">
+                          パーツ:{" "}
+                          {
+                            Object.values(configuration.parts).filter(Boolean)
+                              .length
+                          }
+                          /9
+                        </div>
+                      </div>
+                      <div className="bg-gray-800 rounded-xl h-64">
+                        <PCCaseViewer
+                          configuration={configuration}
+                          className="w-full h-full"
+                          showGrid={false}
+                          enableControls={true}
+                          showUIOverlay={false}
+                          showCaseLabel={false}
+                        />
+                      </div>
+                      <div className="mt-2 text-xs text-gray-200">
+                        ドラッグ: 回転 | ホイール: ズーム
+                      </div>
                     </div>
-                  </div>
-                  <PCCaseViewer 
+                  </ErrorBoundary>
+                )}
+
+                {/* 構成サマリー */}
+                <ErrorBoundary componentName="構成サマリー">
+                  <ConfigSummary
                     configuration={configuration}
-                    className="w-full h-64"
-                    showGrid={true}
-                    enableControls={true}
-                    cameraPosition={[3.5, 3.5, 3.5]}
+                    className="w-full"
                   />
-                  <div className="mt-2 text-xs text-gray-600">
-                    ドラッグ: 回転 | ホイール: ズーム | 右クリック: パン
+                </ErrorBoundary>
+              </div>
+            </div>
+          )}
+
+          {/* 🎯 Desktop用 Far Rightエリア: 広告エリア (w-80) */}
+          {!isMobile && !isTablet && (
+            <div className="w-80 bg-gray-100 border-l border-gray-200 flex-shrink-0">
+              <div className="h-full p-4 overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    📢 おすすめ情報
+                  </h3>
+                  <div className="text-xs text-gray-500">
+                    広告エリア
                   </div>
                 </div>
-              </ErrorBoundary>
-              
+                
+                {/* 広告エリアコンポーネント */}
+                <AdArea className="w-full" />
+                
+                {/* 統計・フィードバック情報 */}
+                <div className="mt-6 p-4 bg-white rounded-lg border">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-2">
+                    💡 おすすめ機能
+                  </h4>
+                  <ul className="text-xs text-gray-600 space-y-1">
+                    <li>• 価格履歴グラフ</li>
+                    <li>• 互換性スコア詳細</li>
+                    <li>• 省エネ度診断</li>
+                    <li>• 類似構成の比較</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* 📱 モバイル用スライド式サマリーパネル (768px以下) */}
+      {isMobileSummaryOpen && isMobile && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50">
+          {/* 背景オーバーレイ */}
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={closeMobileSummary}
+            aria-hidden="true"
+          />
+
+          {/* サマリーコンテンツ */}
+          <div className="absolute right-0 top-0 h-full w-80 bg-cyan-700 transform transition-transform duration-300 ease-in-out z-50">
+            <div className="h-full p-4 space-y-6 overflow-y-auto">
+              {/* ヘッダー */}
+              <div className="flex items-center justify-between pb-4 border-b border-cyan-600">
+                <h3 className="text-lg font-semibold text-white">
+                  🔧 構成サマリー
+                </h3>
+                <button
+                  onClick={closeMobileSummary}
+                  className="p-2 rounded-md text-cyan-200 hover:text-white focus-visible"
+                  aria-label="サマリーを閉じる"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              {/* 3Dビュー（ダッシュボード以外のみ） */}
+              {(activeTab as TabType) !== "integrated" && (
+                <ErrorBoundary componentName="3Dビュー">
+                  <div className="rounded-lg shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-md font-semibold text-white">
+                        🎆 3Dビュー
+                      </h4>
+                      <div className="text-xs text-cyan-200">
+                        パーツ:{" "}
+                        {
+                          Object.values(configuration.parts).filter(Boolean)
+                            .length
+                        }
+                        /9
+                      </div>
+                    </div>
+                    <div className="bg-gray-800 rounded-xl h-64">
+                      <PCCaseViewer
+                        configuration={configuration}
+                        className="w-full h-full"
+                        showGrid={false}
+                        enableControls={true}
+                        showUIOverlay={false}
+                        showCaseLabel={false}
+                      />
+                    </div>
+                    <div className="mt-2 text-xs text-cyan-200">
+                      ドラッグ: 回転 | ホイール: ズーム
+                    </div>
+                  </div>
+                </ErrorBoundary>
+              )}
+
+              {/* 構成サマリー */}
               <ErrorBoundary componentName="構成サマリー">
-                <ConfigSummary 
+                <ConfigSummary
                   configuration={configuration}
                   className="w-full"
                 />
               </ErrorBoundary>
-              
-              {/* 更新通知パネル */}
-              <div className="bg-white rounded-lg shadow-sm border p-4">
-                <UpdateNotifier
-                  notifications={notifications}
-                  onDismiss={dismissNotification}
-                  onRefresh={() => {
-                    // 手動更新処理（例：データ取得等）
-                    success(
-                      'データを更新しました',
-                      '最新の価格情報を取得しました',
-                      'データ更新'
-                    );
-                  }}
-                  className="w-full"
-                />
-              </div>
             </div>
           </div>
         </div>
-      </main>
+      )}
+
+      {/* 統一フッター（全画面共通・固定表示） */}
+      <footer className="bg-gray-800 text-white z-40 flex-shrink-0">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-3 text-sm">
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                <span className="text-gray-300">自動保存済み</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                <span className="text-gray-300 hidden sm:inline">
+                  互換性チェック完了
+                </span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                <span className="text-gray-300 hidden md:inline">
+                  3Dレンダリング中
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <span className="text-gray-400 hidden md:inline">
+                1440 × 1024 | 最終更新: {new Date().toLocaleTimeString()}
+              </span>
+              <span className="text-green-400">✅ 正常動作</span>
+              
+              {/* 📱 Tablet以下でサマリーボタンを最右端に表示 */}
+              {(isMobile || isTablet) && (
+                <button
+                  onClick={toggleMobileSummary}
+                  className="bg-cyan-600 text-white px-3 py-2 rounded-md hover:bg-cyan-700 transition-colors focus-visible flex items-center space-x-2"
+                  aria-label="構成サマリーを開く"
+                >
+                  <span className="text-xs font-medium">サマリー</span>
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
@@ -588,16 +1060,16 @@ const PartSelector: React.FC<{
 }> = ({ category, selectedPart, onSelect }) => {
   const parts = getPartsByCategory(category);
   const categoryNames: Record<PartCategory, string> = {
-    cpu: 'CPU',
-    motherboard: 'マザーボード',
-    memory: 'メモリ',
-    storage: 'ストレージ',
-    gpu: 'グラフィックボード',
-    psu: '電源ユニット',
-    case: 'PCケース',
-    cooler: 'CPUクーラー',
-    monitor: 'モニター',
-    other: 'その他'
+    cpu: "CPU",
+    motherboard: "マザーボード",
+    memory: "メモリ",
+    storage: "ストレージ",
+    gpu: "グラフィックボード",
+    psu: "電源ユニット",
+    case: "PCケース",
+    cooler: "CPUクーラー",
+    monitor: "モニター",
+    other: "その他",
   };
 
   return (
@@ -606,8 +1078,8 @@ const PartSelector: React.FC<{
         {categoryNames[category]}
       </label>
       <select
-        value={selectedPart?.id || ''}
-        onChange={(e) => {
+        value={selectedPart?.id || ""}
+        onChange={e => {
           const partId = e.target.value;
           if (partId) {
             const part = parts.find(p => p.id === partId);

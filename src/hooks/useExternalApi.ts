@@ -105,7 +105,7 @@ export const useExternalApi = (): UseExternalApiReturn => {
     rateLimits: RateLimitStatus[];
     securityStats: SecurityStats;
     auditLog: AuditLogEntry[];
-  }>({  // 🔧 型指定を明示化
+  }>({ 
     rateLimits: [],
     securityStats: {
       activeSessions: 0,
@@ -361,7 +361,7 @@ export const useExternalApi = (): UseExternalApiReturn => {
       
       // 結果をlegacy formatとPhase 2 formatの両方で保存
       const allNewProducts: Part[] = [];
-      for (const [, parts] of results.entries()) { // 🔧 categoryを_に変更
+      for (const [, parts] of results.entries()) {
         allNewProducts.push(...parts);
       }
 

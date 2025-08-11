@@ -71,7 +71,10 @@ button:focus-visible {
   }
 }
 
-/* カスタムスタイルがあれば追加 */
+/* ==========================================
+   レスポンシブデザインシステム - Phase 1
+   ========================================== */
+
 @layer base {
   body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -85,5 +88,202 @@ button:focus-visible {
   
   .btn-secondary {
     @apply px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors;
+  }
+
+  /* ===========================================
+     レスポンシブナビゲーション
+     =========================================== */
+  .desktop-nav {
+    @apply flex space-x-8;
+  }
+
+  .mobile-nav {
+    @apply hidden relative;
+  }
+
+  .mobile-menu-btn {
+    @apply lg:hidden flex items-center px-3 py-2 border rounded text-gray-500 border-gray-600 hover:text-gray-400 hover:border-gray-500;
+  }
+
+  .mobile-dropdown {
+    @apply absolute right-0 top-12 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border;
+  }
+
+  .mobile-nav-link {
+    @apply block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100;
+  }
+
+  /* ===========================================
+     デザインシステム - グラデーション
+     =========================================== */
+  .summary-section {
+    background: linear-gradient(145deg, #0891b2, #0e7490);
+    border-radius: 12px;
+    padding: 16px;
+    margin: 8px 0;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+
+  .custom-hr {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    margin: 12px 0;
+  }
+
+  .progress-bar-improved {
+    @apply w-full bg-gray-200 rounded-full h-3 overflow-hidden;
+  }
+
+  .progress-bar-fill {
+    @apply h-full rounded-full transition-all duration-300 ease-in-out;
+  }
+
+  .progress-bar-fill.success {
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+  }
+
+  .progress-bar-fill.warning {
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+  }
+
+  .progress-bar-fill.danger {
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+  }
+
+  /* ===========================================
+     モバイル用サマリートグル
+     =========================================== */
+  .summary-toggle-btn {
+    @apply md:hidden fixed bottom-4 right-4 z-50 bg-cyan-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-cyan-700 transition-all duration-300;
+  }
+
+  .mobile-summary-panel {
+    @apply md:hidden fixed inset-0 z-40 bg-black bg-opacity-50;
+  }
+
+  .mobile-summary-content {
+    @apply absolute right-0 top-0 h-full w-80 bg-white transform transition-transform duration-300 ease-in-out;
+  }
+
+  .mobile-summary-content.closed {
+    @apply translate-x-full;
+  }
+
+  .mobile-summary-content.open {
+    @apply translate-x-0;
+  }
+}
+
+@layer utilities {
+  /* ===========================================
+     レスポンシブブレイクポイント制御
+     =========================================== */
+  
+  /* Desktop: 1024px以上 - フルナビゲーション */
+  @media (min-width: 1024px) {
+    .desktop-nav {
+      @apply flex;
+    }
+    .mobile-nav {
+      @apply hidden;
+    }
+    .summary-toggle-btn {
+      @apply hidden;
+    }
+  }
+
+  /* Tablet: 768px-1024px - ドロップダウンナビ */
+  @media (max-width: 1024px) and (min-width: 768px) {
+    .desktop-nav {
+      @apply hidden;
+    }
+    .mobile-nav {
+      @apply flex;
+    }
+  }
+
+  /* Mobile: 768px以下 - スライド式サマリー */
+  @media (max-width: 768px) {
+    .desktop-nav {
+      @apply hidden;
+    }
+    .mobile-nav {
+      @apply flex;
+    }
+    
+    .normal-mode .right-panel {
+      @apply hidden;
+    }
+    
+    .normal-mode .main-left {
+      @apply w-full;
+    }
+  }
+
+  /* ===========================================
+     アニメーション
+     =========================================== */
+  .slide-in {
+    animation: slideIn 0.3s ease-out forwards;
+  }
+
+  .slide-out {
+    animation: slideOut 0.3s ease-in forwards;
+  }
+
+  .fade-in {
+    animation: fadeIn 0.2s ease-out forwards;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideOut {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* ===========================================
+     タッチフレンドリーUI
+     =========================================== */
+  .touch-target {
+    @apply min-h-12 min-w-12 flex items-center justify-center;
+  }
+
+  .touch-friendly {
+    @apply p-3 rounded-lg transition-all duration-200 active:scale-95;
+  }
+
+  /* ===========================================
+     アクセシビリティ対応
+     =========================================== */
+  .focus-visible {
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  }
+
+  .sr-only {
+    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
   }
 }

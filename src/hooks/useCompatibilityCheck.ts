@@ -1,185 +1,138 @@
 // src/hooks/useCompatibilityCheck.ts
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { PCConfiguration } from '@/types';
-import { CompatibilityCheckerService } from '@/services/compatibilityChecker';
-import {
-  CompatibilityResult
-} from '@/types/compatibility';
+// 互換性チェック用Reactフック
 
-interface UseCompatibilityCheckOptions {
-  autoCheck?: boolean;
-  debounceMs?: number;
-}
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { PCConfiguration, CompatibilityResult } from '@/types';
+import { CompatibilityCheckerService } from '@/services/compatibilityChecker';
 
 interface UseCompatibilityCheckReturn {
-  compatibilityResult: CompatibilityResult | null;
-  isChecking: boolean;
+  result: CompatibilityResult | null;
+  isLoading: boolean;
   error: string | null;
-  checkCompatibility: (config: PCConfiguration) => void;
-  recheckCompatibility: () => void;
-  clearError: () => void;
+  refresh: () => void;
+  checkSpecificCompatibility: (category: string) => boolean;
 }
 
 export const useCompatibilityCheck = (
-  configuration: PCConfiguration | null,
-  options: UseCompatibilityCheckOptions = {}
+  configuration: PCConfiguration,
+  options?: {
+    autoCheck?: boolean;
+    debounceMs?: number;
+  }
 ): UseCompatibilityCheckReturn => {
-  const { autoCheck = true, debounceMs = 500 } = options;
-  
-  // State
-  const [compatibilityResult, setCompatibilityResult] = useState<CompatibilityResult | null>(null);
-  const [isChecking, setIsChecking] = useState(false);
+  const [result, setResult] = useState<CompatibilityResult | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // CompatibilityChecker service instance
-  const compatibilityChecker = useMemo(() => CompatibilityCheckerService.getInstance(), []);
+  // デフォルト設定
+  const autoCheck = options?.autoCheck ?? true;
+  const debounceMs = options?.debounceMs ?? 300;
 
-  // 互換性チェックを実行
-  const checkCompatibility = useCallback(async (config: PCConfiguration) => {
-    if (!config) return;
+  // 互換性チェックサービスのインスタンス
+  const compatibilityService = useMemo(() => new CompatibilityCheckerService(), []);
 
-    setIsChecking(true);
-    setError(null);
-
+  // 互換性チェック実行
+  const performCheck = useCallback(async () => {
     try {
-      // 少し遅延を入れてUI応答性を向上
-      await new Promise(resolve => setTimeout(resolve, 100));
+      setIsLoading(true);
+      setError(null);
       
-      const result = compatibilityChecker.checkCompatibility(config);
-      setCompatibilityResult(result);
+      const checkResult = compatibilityService.checkFullCompatibility(configuration);
+      setResult(checkResult);
     } catch (err) {
-      const errorMessage = err instanceof Error ? 
-        err.message : '互換性チェック中にエラーが発生しました';
+      const errorMessage = err instanceof Error ? err.message : '互換性チェックエラー';
       setError(errorMessage);
       console.error('Compatibility check error:', err);
     } finally {
-      setIsChecking(false);
+      setIsLoading(false);
     }
-  }, [compatibilityChecker]);
+  }, [compatibilityService, configuration]);
 
-  // デバウンス付きのチェック関数
-  const debouncedCheck = useMemo(
-    () => debounce((config: PCConfiguration) => {
-      checkCompatibility(config);
-    }, debounceMs),
-    [checkCompatibility, debounceMs]
-  );
+  // 手動更新関数
+  const refresh = useCallback(() => {
+    performCheck();
+  }, [performCheck]);
 
-  // 構成が変更された時の自動チェック
+  // 特定カテゴリの互換性チェック
+  const checkSpecificCompatibility = (category: string): boolean => {
+    if (!result) return false;
+    
+    switch (category) {
+      case 'socket':
+        return result.details.cpuSocket.compatible;
+      case 'memory':
+        return result.details.memoryType.compatible;
+      case 'power':
+        return result.details.powerConnectors.compatible;
+      case 'physical':
+        return result.details.physicalFit.compatible;
+      case 'performance':
+        return result.details.performanceMatch.balanced;
+      default:
+        return result.isCompatible;
+    }
+  };
+
+  // 構成変更時の自動チェック（デバウンス付き）
   useEffect(() => {
-    if (autoCheck && configuration) {
-      debouncedCheck(configuration);
-    }
-  }, [configuration, autoCheck, debouncedCheck]);
+    if (!autoCheck) return;
 
-  // 再チェック
-  const recheckCompatibility = useCallback(() => {
-    if (configuration) {
-      checkCompatibility(configuration);
-    }
-  }, [configuration, checkCompatibility]);
+    const timer = setTimeout(() => {
+      // パーツが1つ以上選択されている場合のみチェック実行
+      const hasAnyPart = Object.values(configuration.parts).some(part => part !== null);
+      if (hasAnyPart) {
+        performCheck();
+      } else {
+        // パーツが全て未選択の場合はリセット
+        setResult(null);
+        setError(null);
+      }
+    }, debounceMs);
 
-  // エラークリア
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+    return () => clearTimeout(timer);
+  }, [autoCheck, debounceMs, performCheck, configuration.parts]);
+
+  // 初回マウント時のチェック
+  useEffect(() => {
+    if (autoCheck) {
+      const hasAnyPart = Object.values(configuration.parts).some(part => part !== null);
+      if (hasAnyPart) {
+        performCheck();
+      }
+    }
+  }, [autoCheck, configuration.parts, performCheck]); // 初回のみ実行
 
   return {
-    compatibilityResult,
-    isChecking,
+    result,
+    isLoading,
     error,
-    checkCompatibility,
-    recheckCompatibility,
-    clearError
+    refresh,
+    checkSpecificCompatibility
   };
 };
 
-// デバウンス用ユーティリティ関数
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
-  
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-}
-
-// 互換性スコア評価用のヘルパーフック
-export const useCompatibilityRating = (compatibilityResult: CompatibilityResult | null) => {
-  return useMemo(() => {
-    if (!compatibilityResult) return null;
-
-    const score = compatibilityResult.score;
-    let rating: 'excellent' | 'good' | 'fair' | 'poor';
-    let color: string;
-    let description: string;
-
-    if (score >= 95) {
-      rating = 'excellent';
-      color = 'text-green-600';
-      description = '完全に互換性があります';
-    } else if (score >= 85) {
-      rating = 'good';
-      color = 'text-blue-600';
-      description = '互換性に問題ありません';
-    } else if (score >= 70) {
-      rating = 'fair';
-      color = 'text-yellow-600';
-      description = '注意が必要な項目があります';
-    } else {
-      rating = 'poor';
-      color = 'text-red-600';
-      description = '重要な互換性問題があります';
-    }
-
-    return {
-      rating,
-      color,
-      description,
-      score
-    };
-  }, [compatibilityResult]);
+// 互換性スコア計算用のヘルパー関数
+export const getCompatibilityScoreColor = (score: number): string => {
+  if (score >= 90) return 'text-green-600';
+  if (score >= 70) return 'text-yellow-600';
+  if (score >= 50) return 'text-orange-600';
+  return 'text-red-600';
 };
 
-// 互換性問題の分析用ヘルパーフック
-export const useCompatibilityAnalysis = (compatibilityResult: CompatibilityResult | null) => {
-  return useMemo(() => {
-    if (!compatibilityResult) return null;
+// 互換性ステータス表示用のヘルパー関数
+export const getCompatibilityStatusText = (isCompatible: boolean, hasIssues: boolean): string => {
+  if (isCompatible && !hasIssues) return '互換性あり';
+  if (isCompatible && hasIssues) return '注意が必要';
+  return '互換性なし';
+};
 
-    const criticalIssues = compatibilityResult.issues.filter(issue => issue.severity === 'critical');
-    const warningIssues = compatibilityResult.issues.filter(issue => issue.severity === 'warning');
-    const infoIssues = compatibilityResult.issues.filter(issue => issue.severity === 'info');
-
-    const hasBlockingIssues = criticalIssues.length > 0;
-    const needsAttention = warningIssues.length > 0;
-    
-    const priorityActions = criticalIssues.map(issue => ({
-      action: issue.solution || '対応が必要です',
-      category: issue.category,
-      urgency: 'high' as const
-    }));
-
-    const suggestions = warningIssues.map(issue => ({
-      action: issue.solution || '改善を推奨します',
-      category: issue.category,
-      urgency: 'medium' as const
-    }));
-
-    return {
-      criticalIssues,
-      warningIssues,
-      infoIssues,
-      hasBlockingIssues,
-      needsAttention,
-      priorityActions,
-      suggestions,
-      totalIssues: compatibilityResult.issues.length
-    };
-  }, [compatibilityResult]);
+// 互換性問題の重要度別フィルタ
+export const filterIssuesBySeverity = (
+  result: CompatibilityResult | null,
+  severity: 'critical' | 'warning' | 'info'
+) => {
+  if (!result) return [];
+  return result.issues.filter(issue => issue.severity === severity);
 };
 
 export default useCompatibilityCheck;

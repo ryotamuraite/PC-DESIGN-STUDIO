@@ -446,7 +446,7 @@ class ApiSecurity {
       userAgent: endpoint?.security.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       referer: endpoint?.security.referer,
       acceptLanguage: endpoint?.security.acceptLanguage || 'ja-JP,ja;q=0.9,en;q=0.8',
-      randomDelay: this.generateRandomDelay(config.randomDelayRange as [number, number]), // 🔧 型キャスト
+      randomDelay: this.generateRandomDelay(config.randomDelayRange as [number, number]),
       sessionId: this.currentSessionId,
       fingerprint: this.generateFingerprint(source)
     };

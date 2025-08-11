@@ -207,8 +207,8 @@ class StockService {
         // 定期チェックでは更に慎重な間隔
         await this.safeDelay(10000 + Math.random() * 5000);
 
-      } catch (error) {
-        console.error(`❌ 定期在庫チェックエラー: ${partId}`, error);
+      } catch {
+        console.error(`❌ 定期在庫チェックエラー: ${partId}`);
       }
     }
 
@@ -366,7 +366,7 @@ class StockService {
     //   'pre_order': 2,
     //   'out_of_stock': 1,
     //   'discontinued': 0
-    // }; // 🔧 未使用のためコメントアウト
+    // };
 
     // 最も信頼性の高いソースから在庫状況を決定
     const bestSource = sources.reduce((best, current) => 

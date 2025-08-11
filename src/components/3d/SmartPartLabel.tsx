@@ -53,15 +53,19 @@ export const SmartPartLabel: React.FC<SmartPartLabelProps> = ({
     candidates.forEach(candidate => {
       let score = 0;
       
-      // 他のラベルとの距離を計算
-      avoidPositions.forEach(avoidPos => {
-        const distance = Math.sqrt(
-          Math.pow(candidate[0] - avoidPos[0], 2) +
-          Math.pow(candidate[1] - avoidPos[1], 2) +
-          Math.pow(candidate[2] - avoidPos[2], 2)
-        );
-        score += Math.min(distance * 10, 50); // 距離が離れているほど高得点
-      });
+      // 他のラベルとの距離を計算（安全な処理）
+      if (avoidPositions && Array.isArray(avoidPositions)) {
+        avoidPositions.forEach(avoidPos => {
+          if (avoidPos && Array.isArray(avoidPos) && avoidPos.length >= 3) {
+            const distance = Math.sqrt(
+              Math.pow(candidate[0] - avoidPos[0], 2) +
+              Math.pow(candidate[1] - avoidPos[1], 2) +
+              Math.pow(candidate[2] - avoidPos[2], 2)
+            );
+            score += Math.min(distance * 10, 50); // 距離が離れているほど高得点
+          }
+        });
+      }
 
       // カメラからの見やすさを考慮
       const cameraPos = camera.position;
@@ -84,14 +88,14 @@ export const SmartPartLabel: React.FC<SmartPartLabelProps> = ({
     return bestPosition;
   }, [partPosition, avoidPositions, camera.position]);
 
-  // カメラが動いた時の位置更新
+  // カメラが動いた時の位置更新（ちらつき防止強化）
   useFrame(() => {
     const newPosition = calculateOptimalPosition;
     const [nx, ny, nz] = newPosition;
     const [cx, cy, cz] = labelPosition;
     
-    // 位置が大きく変わった場合のみ更新（jitter防止）
-    const threshold = 0.1;
+    // 位置が大きく変わった場合のみ更新（jitter防止・閾値を大きく）
+    const threshold = 0.8; // 0.5から0.8にさらに拡大（ちらつき完全防止）
     if (
       Math.abs(nx - cx) > threshold ||
       Math.abs(ny - cy) > threshold ||
@@ -101,7 +105,7 @@ export const SmartPartLabel: React.FC<SmartPartLabelProps> = ({
       onPositionUpdate?.(newPosition);
     }
 
-    // 線の更新
+    // 線の更新（フレーム制限）
     if (lineRef.current) {
       const geometry = lineRef.current.geometry as THREE.BufferGeometry;
       const positions = new Float32Array([
@@ -113,7 +117,7 @@ export const SmartPartLabel: React.FC<SmartPartLabelProps> = ({
     }
   });
 
-  // 線オブジェクトを作成
+  // 線オブジェクトを作成（改善版：太さ・視認性向上）
   const lineObject = useMemo(() => {
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array([
@@ -125,7 +129,8 @@ export const SmartPartLabel: React.FC<SmartPartLabelProps> = ({
     const material = new THREE.LineBasicMaterial({
       color: color,
       transparent: true,
-      opacity: 0.8
+      opacity: 0.95, // 0.8から0.95に向上（鮮明化）
+      linewidth: 3, // 線の太さ指定（WebGL制限あり）
     });
     
     const line = new THREE.Line(geometry, material);
@@ -137,15 +142,15 @@ export const SmartPartLabel: React.FC<SmartPartLabelProps> = ({
       {/* 接続線 */}
       <primitive object={lineObject} ref={lineRef} />
       
-      {/* 接続点（パーツ側） */}
+      {/* 接続点（パーツ側） - サイズ向上 */}
       <mesh position={partPosition}>
-        <sphereGeometry args={[0.02]} />
+        <sphereGeometry args={[0.03]} />
         <meshBasicMaterial color={color} />
       </mesh>
       
-      {/* 接続点（ラベル側） */}
+      {/* 接続点（ラベル側） - サイズ向上 */}
       <mesh position={labelPosition}>
-        <sphereGeometry args={[0.015]} />
+        <sphereGeometry args={[0.025]} />
         <meshBasicMaterial color={color} />
       </mesh>
 

@@ -2,7 +2,6 @@
 // PCケース3Dモデルコンポーネント - Phase3革新機能
 
 import React, { useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
 import { Box, Html } from '@react-three/drei';
 import type { Part } from '@/types';
 import * as THREE from 'three';
@@ -11,12 +10,14 @@ interface PCCase3DProps {
   caseData: Part | null;
   position?: [number, number, number];
   showInternals?: boolean;
+  showLabel?: boolean; // ラベル表示制御を追加
 }
 
 export const PCCase3D: React.FC<PCCase3DProps> = ({
   caseData,
   position = [0, 0, 0],
-  showInternals = true
+  showInternals = true,
+  showLabel = true // デフォルトはtrue
 }) => {
   const caseRef = useRef<THREE.Group>(null);
 
@@ -26,16 +27,23 @@ export const PCCase3D: React.FC<PCCase3DProps> = ({
   const caseDepth = 1.5;   // 幅
   const wallThickness = 0.05;
 
-  // 軽微なアニメーション（オプション）
-  useFrame((state) => {
-    if (caseRef.current) {
-      // 非常に軽微な浮遊アニメーション
-      caseRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 0.5) * 0.02;
-    }
-  });
+  // ケース底部を地面に接地させるためのY位置調整
+  const adjustedPosition: [number, number, number] = [
+    position[0], 
+    position[1] + caseHeight/2, // 底部を地面（Y=0）に接地
+    position[2]
+  ];
+
+  // 軽微なアニメーション（削除：安定性向上）
+  // useFrame((state) => {
+  //   if (caseRef.current) {
+  //     // 非常に軽微な浮遊アニメーション
+  //     caseRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 0.5) * 0.02;
+  //   }
+  // });
 
   return (
-    <group ref={caseRef} position={position}>
+    <group ref={caseRef} position={adjustedPosition}>
       {/* ケース外装 */}
       <group>
         {/* 背面パネル */}
@@ -159,23 +167,25 @@ export const PCCase3D: React.FC<PCCase3DProps> = ({
         </group>
       )}
 
-      {/* ケース情報ラベル */}
-      <Html
-        position={[0, caseHeight/2 + 0.4, 0]}
-        center
-        distanceFactor={6}
-      >
-        <div className="bg-black bg-opacity-80 text-white px-4 py-2 rounded-lg text-sm text-center shadow-lg border border-gray-600">
-          <div className="font-bold text-lg">
-            {caseData?.name || 'PCケース'}
-          </div>
-          {caseData && (
-            <div className="text-sm opacity-90 mt-1">
-              {caseData.manufacturer}
+      {/* ケース情報ラベル（表示制御対応） */}
+      {showLabel && (
+        <Html
+          position={[0, caseHeight/2 + 0.4, 0]}
+          center
+          distanceFactor={8}
+        >
+          <div className="bg-black bg-opacity-80 text-white px-3 py-1.5 rounded-lg text-center shadow-lg border border-gray-600" style={{ minWidth: '100px', whiteSpace: 'nowrap' }}>
+            <div className="font-medium text-xs">
+              {caseData?.name || 'PCケース'}
             </div>
-          )}
-        </div>
-      </Html>
+            {caseData && (
+              <div className="text-xs opacity-80 mt-0.5">
+                {caseData.manufacturer}
+              </div>
+            )}
+          </div>
+        </Html>
+      )}
     </group>
   );
 };
