@@ -6,20 +6,33 @@ import ErrorBoundary from "@/components/error/ErrorBoundary";
 import { FigmaIntegratedDashboard } from "@/components/integrated";
 import PartSearch from "@/components/search/PartSearch";
 import ConfigSummary from "@/components/summary/ConfigSummary";
+import { IntegratedPartSelector } from "@/components/integrated-selector";
+// 🚧 Phase 2.5: 複数搭載対応システムインポート
+import { MultiPartManager } from "@/components/multi-part";
 import {
   compatibleCombinations,
-  getPartsByCategory,
   sampleParts,
 } from "@/data/sampleParts";
 import { useNotifications } from "@/hooks/useNotifications";
-import { PCConfiguration, Part, PartCategory } from "@/types";
+import { useTabVisibility, TAB_VISIBILITY_PHASES } from "@/hooks/ui/useTabVisibility";
+// 🚧 Phase 2.5: データ永続化統合
+import { useExtendedConfiguration } from "@/hooks/useExtendedConfiguration";
+import { 
+  PCConfiguration, 
+  ExtendedPCConfiguration,
+  convertToExtendedConfiguration,
+  convertToLegacyConfiguration,
+  Part, 
+  PartCategory 
+} from "@/types";
 import React, { useState } from "react";
 // 🎨 ロゴファイルのimport - Viteベースパス対応
 import logoSvg from "/assets/logo.svg";
 
-// 統合ダッシュボード用の型定義
+// 統合ダッシュボード用の型定義（Phase 2.5: 複数搭載対応タブ追加）
 type TabType =
   | "builder"
+  | "multipart" // 🚧 Phase 2.5: 複数搭載対応システム
   | "power"
   | "compatibility"
   | "search"
@@ -99,24 +112,18 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>("builder");
   const { success, warning } = useNotifications();
 
+  // 🎯 新機能: タブ表示制御（段階的統合対応）
+  const {
+    isMobile,
+    isTablet, 
+    isDesktop,
+    shouldShowSearchTab,
+    deviceType
+  } = useTabVisibility(TAB_VISIBILITY_PHASES.PHASE_2_MOBILE_TABLET_HIDDEN);
+
   // 📱 レスポンシブ状態管理
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSummaryOpen, setIsMobileSummaryOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [isTablet, setIsTablet] = useState(false);
-
-  // 📱 レスポンシブ検知
-  React.useEffect(() => {
-    const checkScreenSize = () => {
-      const width = window.innerWidth;
-      setIsMobile(width <= 768);
-      setIsTablet(width > 768 && width <= 1024);
-    };
-
-    checkScreenSize();
-    window.addEventListener("resize", checkScreenSize);
-    return () => window.removeEventListener("resize", checkScreenSize);
-  }, []);
 
   // 📱 レスポンシブ制御関数
   const toggleMobileMenu = () => {
@@ -141,6 +148,7 @@ const App: React.FC = () => {
     closeMobileMenu();
   };
 
+  // 🚧 Phase 2.5: 既存PCConfiguration状態管理
   const [configuration, setConfiguration] = useState<PCConfiguration>({
     id: "config-1",
     name: "My PC Build",
@@ -161,6 +169,42 @@ const App: React.FC = () => {
     updatedAt: new Date(),
     description: "",
     tags: [],
+  });
+
+  // 🚧 Phase 2.5: ExtendedPCConfiguration with LocalStorage persistence
+  const {
+    configuration: extendedConfiguration,
+    updateConfiguration: setExtendedConfiguration,
+    saveConfiguration: saveExtendedConfiguration,
+    isLoading: isExtendedConfigLoading,
+    isSaving: isExtendedConfigSaving,
+    hasUnsavedChanges: hasExtendedUnsavedChanges,
+    lastSavedAt: extendedLastSavedAt,
+    history: extendedConfigHistory
+  } = useExtendedConfiguration({
+    autoSave: true,
+    autoSaveInterval: 30000, // 30秒
+    onSave: (config) => {
+      success(
+        "ExtendedPC構成を自動保存しました",
+        `構成: ${config.name} | パーツ数: ${Object.values(config.parts).filter(Boolean).length}`,
+        "自動保存"
+      );
+    },
+    onLoad: (config) => {
+      success(
+        "保存済み構成を読み込みました",
+        `構成: ${config.name} | 最終更新: ${config.updatedAt.toLocaleDateString()}`,
+        "構成読み込み"
+      );
+    },
+    onError: (error) => {
+      warning(
+        "構成の保存/読み込みでエラーが発生しました",
+        error.message,
+        "ストレージエラー"
+      );
+    }
   });
 
   // カテゴリ表示名を取得
@@ -294,7 +338,7 @@ const App: React.FC = () => {
 
             {/* 📱 レスポンシブナビゲーション */}
             {/* デスクトップナビゲーション (1024px以上) */}
-            {!isMobile && !isTablet && (
+            {isDesktop && (
               <nav className="flex space-x-8">
                 <button
                   onClick={() => handleTabSwitch("integrated")}
@@ -316,6 +360,17 @@ const App: React.FC = () => {
                 >
                   構成作成
                 </button>
+                {/* 🚧 Phase 2.5: 複数搭載対応タブ */}
+                <button
+                  onClick={() => handleTabSwitch("multipart")}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                    (activeTab as TabType) === "multipart"
+                      ? "bg-orange-100 text-orange-700"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  🚧 複数搭載
+                </button>
                 <button
                   onClick={() => handleTabSwitch("power")}
                   className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
@@ -336,16 +391,19 @@ const App: React.FC = () => {
                 >
                   互換性チェック
                 </button>
-                <button
-                  onClick={() => handleTabSwitch("search")}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
-                    (activeTab as TabType) === "search"
-                      ? "bg-blue-100 text-blue-700"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  パーツ検索
-                </button>
+                {/* 🎯 段階的統合: パーツ検索タブ表示制御 */}
+                {shouldShowSearchTab && (
+                  <button
+                    onClick={() => handleTabSwitch("search")}
+                    className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                      (activeTab as TabType) === "search"
+                        ? "bg-blue-100 text-blue-700"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    パーツ検索
+                  </button>
+                )}
               </nav>
             )}
 
@@ -405,6 +463,17 @@ const App: React.FC = () => {
                       >
                         🔧 構成作成
                       </button>
+                      {/* 🚧 Phase 2.5: モバイルメニューに複数搭載対応タブ追加 */}
+                      <button
+                        onClick={() => handleTabSwitch("multipart")}
+                        className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left ${
+                          (activeTab as TabType) === "multipart"
+                            ? "bg-orange-50 text-orange-700 font-medium"
+                            : ""
+                        }`}
+                      >
+                        🚧 複数搭載
+                      </button>
                       <button
                         onClick={() => handleTabSwitch("power")}
                         className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left ${
@@ -425,30 +494,62 @@ const App: React.FC = () => {
                       >
                         ✅ 互換性チェック
                       </button>
-                      <button
-                        onClick={() => handleTabSwitch("search")}
-                        className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left ${
-                          (activeTab as TabType) === "search"
-                            ? "bg-blue-50 text-blue-700 font-medium"
-                            : ""
-                        }`}
-                      >
-                        🔍 パーツ検索
-                      </button>
+                      {/* 🎯 段階的統合: モバイル・タブレットでパーツ検索タブ非表示 */}
+                      {shouldShowSearchTab && (
+                        <button
+                          onClick={() => handleTabSwitch("search")}
+                          className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left ${
+                            (activeTab as TabType) === "search"
+                              ? "bg-blue-50 text-blue-700 font-medium"
+                              : ""
+                          }`}
+                        >
+                          🔍 パーツ検索
+                        </button>
+                      )}
                     </div>
                   </>
                 )}
               </div>
             )}
 
-            {/* 構成状態インジケーター（統合版） */}
+            {/* 構成状態インジケーター（統合版 + データ永続化状態） */}
             <div className="flex items-center space-x-4">
+              {/* パーツ数と価格 */}
               <div className="text-sm text-gray-600">
                 パーツ数:{" "}
                 {Object.values(configuration.parts).filter(Boolean).length}/9
               </div>
               <div className="text-sm font-medium text-gray-900">
                 ¥{configuration.totalPrice.toLocaleString()}
+              </div>
+              
+              {/* 保存状態インジケーター */}
+              <div className="flex items-center space-x-2">
+                {isExtendedConfigSaving ? (
+                  <div className="flex items-center space-x-1">
+                    <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-yellow-600">保存中...</span>
+                  </div>
+                ) : hasExtendedUnsavedChanges ? (
+                  <div className="flex items-center space-x-1">
+                    <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                    <span className="text-xs text-orange-600">未保存</span>
+                  </div>
+                ) : extendedLastSavedAt ? (
+                  <div className="flex items-center space-x-1">
+                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                    <span className="text-xs text-green-600 hidden sm:inline">
+                      {extendedLastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}保存済み
+                    </span>
+                    <span className="text-xs text-green-600 sm:hidden">保存済み</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                    <span className="text-xs text-gray-600">-</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -476,6 +577,68 @@ const App: React.FC = () => {
               />
             ) : (
               <div className="h-full px-4 sm:px-6 lg:px-8 py-8 overflow-y-auto">
+                {/* 🚧 Phase 2.5: 複数搭載対応システムタブ */}
+                {(activeTab as TabType) === "multipart" && (
+                  <div className="space-y-6">
+                    <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                            <span className="text-orange-600 text-sm font-bold">🚧</span>
+                          </div>
+                        </div>
+                        <div className="ml-3">
+                          <h3 className="text-sm font-medium text-orange-800">
+                            🚧 Phase 2.5 新機能: 複数搭載対応システム
+                          </h3>
+                          <p className="text-xs text-orange-700 mt-1">
+                            ストレージ・PCファン・モニター等の複数搭載に対応し、物理制限をリアルタイム監視します。
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* MultiPartManagerコンポーネント - LocalStorage連携対応 */}
+                    <MultiPartManager
+                      configuration={extendedConfiguration}
+                      onConfigurationChange={(newConfig) => {
+                        setExtendedConfiguration(() => ({
+                          ...newConfig,
+                          updatedAt: new Date()
+                        }));
+                      }}
+                      className="w-full"
+                    />
+
+                    {/* 追加情報 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="bg-blue-50 rounded-lg p-6">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">
+                          🚀 新機能の特徴
+                        </h3>
+                        <ul className="text-sm text-blue-800 space-y-2">
+                          <li>• ストレージ、メモリ、ファンの複数搭載</li>
+                          <li>• M.2スロット、SATAコネクタの自動管理</li>
+                          <li>• 物理制限のリアルタイム監視</li>
+                          <li>• 制限超過警告システム</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-green-50 rounded-lg p-6">
+                        <h3 className="text-sm font-semibold text-green-900 mb-3">
+                          📊 監視項目
+                        </h3>
+                        <ul className="text-sm text-green-800 space-y-2">
+                          <li>• M.2スロット使用状況</li>
+                          <li>• メモリスロット使用状況</li>
+                          <li>• ファンマウント使用状況</li>
+                          <li>• 電源コネクタ使用状況</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {(activeTab as TabType) === "builder" && (
                   <div className="space-y-6">
                     {/* 予算設定 */}
@@ -595,33 +758,12 @@ const App: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* パーツ選択 */}
-                      <div className="bg-white rounded-lg shadow-sm border p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                          パーツ選択
-                        </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {(
-                            [
-                              "cpu",
-                              "motherboard",
-                              "memory",
-                              "gpu",
-                              "psu",
-                              "case",
-                            ] as PartCategory[]
-                          ).map(category => (
-                            <PartSelector
-                              key={category}
-                              category={category}
-                              selectedPart={
-                                configuration.parts[category] || null
-                              }
-                              onSelect={part => selectPart(category, part)}
-                            />
-                          ))}
-                        </div>
-                      </div>
+                      {/* 🎉 新機能: 統合パーツ選択UI */}
+                      <IntegratedPartSelector
+                        configuration={configuration}
+                        onPartSelect={selectPart}
+                        className="w-full"
+                      />
                     </div>
                   </div>
                 )}
@@ -783,8 +925,28 @@ const App: React.FC = () => {
                   </div>
                 )}
 
-                {(activeTab as TabType) === "search" && (
+                {/* 🎯 段階的統合: パーツ検索タブコンテンツ表示制御 */}
+                {(activeTab as TabType) === "search" && shouldShowSearchTab && (
                   <div className="space-y-6">
+                    {/* 🎯 段階的統合情報表示 */}
+                    <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                            <span className="text-orange-600 text-sm font-bold">⚠️</span>
+                          </div>
+                        </div>
+                        <div className="ml-3">
+                          <h3 className="text-sm font-medium text-orange-800">
+                            🎯 段階的統合進行中 - Phase 2
+                          </h3>
+                          <p className="text-xs text-orange-700 mt-1">
+                            デバイス: {deviceType} | パーツ検索タブ: {shouldShowSearchTab ? '表示中' : '非表示'} | モバイル・タブレットでは統合UIをご利用ください
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
                     <PartSearch
                       onPartSelect={handlePartSelect}
                       showAddButton={true}
@@ -816,6 +978,40 @@ const App: React.FC = () => {
                           <li>• 在庫状況を確認</li>
                           <li>• 構成に追加して互換性チェック</li>
                         </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 🎯 段階的統合: パーツ検索タブ非表示時のメッセージ */}
+                {(activeTab as TabType) === "search" && !shouldShowSearchTab && (
+                  <div className="space-y-6">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-dashed border-blue-300 rounded-lg p-8 text-center">
+                      <div className="max-w-md mx-auto">
+                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <span className="text-2xl">🔄</span>
+                        </div>
+                        <h2 className="text-lg font-semibold text-blue-900 mb-2">
+                          🎯 統合UIでパーツ検索をご利用ください
+                        </h2>
+                        <p className="text-sm text-blue-700 mb-4">
+                          {deviceType === 'mobile' ? 'モバイル' : 'タブレット'}では、パーツ検索機能が統合UIに統合されました。
+                          より直感的で効率的なパーツ選択が可能です。
+                        </p>
+                        <div className="flex justify-center space-x-4">
+                          <button
+                            onClick={() => handleTabSwitch("builder")}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                          >
+                            🔧 構成作成タブへ
+                          </button>
+                          <button
+                            onClick={() => handleTabSwitch("integrated")}
+                            className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                          >
+                            🎨 ダッシュボードへ
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -909,7 +1105,7 @@ const App: React.FC = () => {
 
       {/* 📱 モバイル用スライド式サマリーパネル (768px以下) */}
       {isMobileSummaryOpen && isMobile && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-30 bg-black bg-opacity-50" style={{ top: '80px', bottom: '48px' }}>
           {/* 背景オーバーレイ */}
           <div
             className="absolute inset-0 bg-black bg-opacity-50"
@@ -918,7 +1114,7 @@ const App: React.FC = () => {
           />
 
           {/* サマリーコンテンツ */}
-          <div className="absolute right-0 top-0 h-full w-80 bg-cyan-700 transform transition-transform duration-300 ease-in-out z-50">
+          <div className="absolute right-0 top-0 h-full w-80 bg-cyan-700 transform transition-transform duration-300 ease-in-out z-40">
             <div className="h-full p-4 space-y-6 overflow-y-auto">
               {/* ヘッダー */}
               <div className="flex items-center justify-between pb-4 border-b border-cyan-600">
@@ -1016,10 +1212,14 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex items-center space-x-4">
-              <span className="text-gray-400 hidden md:inline">
-                1440 × 1024 | 最終更新: {new Date().toLocaleTimeString()}
+              {/* 🎯 段階的統合ステータス表示 */}
+              <span className="text-gray-400 hidden lg:inline">
+                {deviceType.toUpperCase()} | 検索タブ: {shouldShowSearchTab ? '表示' : '統合済み'}
               </span>
-              <span className="text-green-400">✅ 正常動作</span>
+              <span className="text-gray-400 hidden md:inline">
+                最終更新: {new Date().toLocaleTimeString()}
+              </span>
+              <span className="text-green-400">✅ Phase 2実行中</span>
               
               {/* 📱 Tablet以下でサマリーボタンを最右端に表示 */}
               {(isMobile || isTablet) && (
@@ -1048,60 +1248,6 @@ const App: React.FC = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
-};
-
-// パーツ選択コンポーネント
-const PartSelector: React.FC<{
-  category: PartCategory;
-  selectedPart: Part | null;
-  onSelect: (part: Part | null) => void;
-}> = ({ category, selectedPart, onSelect }) => {
-  const parts = getPartsByCategory(category);
-  const categoryNames: Record<PartCategory, string> = {
-    cpu: "CPU",
-    motherboard: "マザーボード",
-    memory: "メモリ",
-    storage: "ストレージ",
-    gpu: "グラフィックボード",
-    psu: "電源ユニット",
-    case: "PCケース",
-    cooler: "CPUクーラー",
-    monitor: "モニター",
-    other: "その他",
-  };
-
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        {categoryNames[category]}
-      </label>
-      <select
-        value={selectedPart?.id || ""}
-        onChange={e => {
-          const partId = e.target.value;
-          if (partId) {
-            const part = parts.find(p => p.id === partId);
-            onSelect(part || null);
-          } else {
-            onSelect(null);
-          }
-        }}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-      >
-        <option value="">選択してください</option>
-        {parts.map(part => (
-          <option key={part.id} value={part.id}>
-            {part.name} - ¥{part.price.toLocaleString()}
-          </option>
-        ))}
-      </select>
-      {selectedPart && (
-        <p className="mt-1 text-xs text-gray-500">
-          {selectedPart.manufacturer} | ¥{selectedPart.price.toLocaleString()}
-        </p>
-      )}
     </div>
   );
 };

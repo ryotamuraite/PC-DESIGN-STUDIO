@@ -334,6 +334,7 @@ export const categoryNames: Record<string, string> = {
   psu: '電源ユニット',
   case: 'PCケース',
   cooler: 'CPUクーラー',
+  cpu_cooler: 'CPUクーラー', // 互換性のため
   monitor: 'モニター'
 };
 

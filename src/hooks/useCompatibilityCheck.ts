@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { PCConfiguration, CompatibilityResult } from '@/types';
-import { CompatibilityCheckerService } from '@/services/compatibilityChecker';
+import { CompatibilityCheckerService } from '@/services/compatibilityChecker.enhanced';
 
 interface UseCompatibilityCheckReturn {
   result: CompatibilityResult | null;

@@ -17,6 +17,7 @@ interface PCCaseViewerProps {
   cameraPosition?: [number, number, number];
   showUIOverlay?: boolean; // UIオーバーレイの表示制御
   showCaseLabel?: boolean; // 3Dモデル内ケースラベルの表示制御
+  showCompatibilityWarnings?: boolean; // 🎯 Step2: 互換性視覚化表示制御
 }
 
 export type { PCCaseViewerProps };
@@ -28,7 +29,8 @@ export const PCCaseViewer: React.FC<PCCaseViewerProps> = ({
   enableControls = true,
   cameraPosition = [5, 5, 5],
   showUIOverlay = true,
-  showCaseLabel = true
+  showCaseLabel = true,
+  showCompatibilityWarnings = true // 🎯 Step2: デフォルトで互換性視覚化有効
 }) => {
   const [webglError, setWebglError] = useState<string | null>(null);
   const [webglSupported, setWebglSupported] = useState(true);
@@ -159,10 +161,11 @@ export const PCCaseViewer: React.FC<PCCaseViewerProps> = ({
             showLabel={showCaseLabel}
           />
           
-          {/* パーツレンダリング */}
+          {/* パーツレンダリング - 🎯 Step2: 互換性視覚化連携 */}
           <PartsRenderer 
             configuration={configuration}
             caseData={configuration.parts.case || null}
+            showCompatibilityWarnings={showCompatibilityWarnings}
           />
         </Suspense>
 

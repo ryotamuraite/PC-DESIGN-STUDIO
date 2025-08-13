@@ -42,7 +42,94 @@ export interface Part {
   alerts?: (PriceAlert | StockAlert | NewProductAlert)[];
 }
 
-// PC構成
+// ===========================================
+// 🚧 Phase 2.5: 複数搭載対応システム型定義
+// ===========================================
+
+// 物理制限情報（マザーボード・ケース依存）
+export interface PhysicalLimits {
+  maxM2Slots: number;              // マザーボード依存
+  maxSataConnectors: number;       // マザーボード依存
+  maxMemorySlots: number;          // マザーボード依存
+  maxFanMounts: number;            // ケース依存
+  maxGpuLength: number;            // ケース依存
+  maxCpuCoolerHeight: number;      // ケース依存
+  maxPsuLength: number;            // ケース依存
+  maxExpansionSlots: number;       // マザーボード依存
+  maxPowerConnectors: number;      // 電源依存
+}
+
+// スロット使用状況（リアルタイム計算）
+export interface SlotUsage {
+  m2SlotsUsed: number;
+  sataConnectorsUsed: number;
+  memorySlotUsed: number;
+  fanMountsUsed: number;
+  expansionSlotsUsed: number;
+  powerConnectorsUsed: number;
+}
+
+// 複数搭載対応：必須パーツ（1つずつ）
+export interface CoreComponents {
+  cpu: Part | null;
+  motherboard: Part | null;
+  memory: Part | null;             // 基本メモリ
+  gpu: Part | null;
+  psu: Part | null;
+  case: Part | null;
+  cooler: Part | null;
+}
+
+// 複数搭載対応：追加パーツ（複数可能）
+export interface AdditionalComponents {
+  storage: Part[];                 // 複数ストレージ対応
+  memory: Part[];                  // 追加メモリ
+  fans: Part[];                    // 追加ファン
+  monitors: Part[];                // 複数モニター
+  accessories: Part[];             // 周辺機器・工具
+  expansion: Part[];               // 拡張カード
+}
+
+// 新PCConfiguration型（複数搭載対応）
+export interface ExtendedPCConfiguration {
+  id: string;
+  name: string;
+  
+  // 必須パーツ（1つずつ）
+  coreComponents: CoreComponents;
+  
+  // 追加パーツ（複数可能）
+  additionalComponents: AdditionalComponents;
+  
+  // 物理制限情報（自動計算）
+  physicalLimits: PhysicalLimits;
+  
+  // 使用状況（リアルタイム計算）
+  slotUsage: SlotUsage;
+  
+  // 計算値
+  totalPrice: number;
+  totalPowerConsumption?: number;
+  
+  // メタデータ
+  budget?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+  description?: string;
+  tags?: string[];
+  
+  // 制限チェック結果
+  limitChecks: {
+    isValid: boolean;
+    violations: Array<{
+      type: 'slot_overflow' | 'power_shortage' | 'physical_incompatible' | 'budget_exceeded';
+      message: string;
+      severity: 'warning' | 'error';
+    }>;
+  };
+}
+
+// 従来のPC構成（互換性維持）
 export interface PCConfiguration {
   id: string;
   name: string;
@@ -54,6 +141,125 @@ export interface PCConfiguration {
   updatedAt?: Date;
   description?: string;
   tags?: string[];
+}
+
+// 複数搭載対応のユニオン型
+export type UnifiedPCConfiguration = PCConfiguration | ExtendedPCConfiguration;
+
+// 型判定ユーティリティ
+export function isExtendedConfiguration(config: UnifiedPCConfiguration): config is ExtendedPCConfiguration {
+  return 'coreComponents' in config && 'additionalComponents' in config;
+}
+
+// PCConfiguration互換性関数
+export function convertToLegacyConfiguration(config: ExtendedPCConfiguration): PCConfiguration {
+  const parts: Partial<Record<PartCategory, Part | null>> = {};
+  
+  // 必須パーツを変換
+  Object.entries(config.coreComponents).forEach(([category, part]) => {
+    if (part) {
+      parts[category as PartCategory] = part;
+    }
+  });
+  
+  // 追加パーツの最初の要素を追加（従来互換性）
+  Object.entries(config.additionalComponents).forEach(([category, partArray]) => {
+    if (partArray.length > 0) {
+      parts[category as PartCategory] = partArray[0];
+    }
+  });
+  
+  return {
+    id: config.id,
+    name: config.name,
+    parts,
+    totalPrice: config.totalPrice,
+    totalPowerConsumption: config.totalPowerConsumption,
+    budget: config.budget,
+    createdAt: config.createdAt,
+    updatedAt: config.updatedAt,
+    description: config.description,
+    tags: config.tags
+  };
+}
+
+// ExtendedPCConfiguration互換性関数
+export function convertToExtendedConfiguration(config: PCConfiguration): ExtendedPCConfiguration {
+  const coreComponents: CoreComponents = {
+    cpu: null,
+    motherboard: null,
+    memory: null,
+    gpu: null,
+    psu: null,
+    case: null,
+    cooler: null
+  };
+  
+  const additionalComponents: AdditionalComponents = {
+    storage: [],
+    memory: [],
+    fans: [],
+    monitors: [],
+    accessories: [],
+    expansion: []
+  };
+  
+  // パーツを適切なカテゴリに配置
+  Object.entries(config.parts).forEach(([category, part]) => {
+    if (!part) return;
+    
+    const cat = category as PartCategory;
+    
+    // 必須パーツカテゴリ
+    if (['cpu', 'motherboard', 'gpu', 'psu', 'case', 'cooler'].includes(cat)) {
+      coreComponents[cat as keyof CoreComponents] = part;
+    }
+    // メモリは最初を必須、残りを追加に配置
+    else if (cat === 'memory') {
+      coreComponents.memory = part;
+    }
+    // その他は追加パーツに配置
+    else if (['storage', 'fans', 'monitors', 'accessories', 'expansion'].includes(cat)) {
+      (additionalComponents[cat as keyof AdditionalComponents] as Part[]).push(part);
+    }
+  });
+  
+  return {
+    id: config.id,
+    name: config.name,
+    coreComponents,
+    additionalComponents,
+    physicalLimits: {
+      maxM2Slots: 2,
+      maxSataConnectors: 6,
+      maxMemorySlots: 4,
+      maxFanMounts: 6,
+      maxGpuLength: 350,
+      maxCpuCoolerHeight: 165,
+      maxPsuLength: 200,
+      maxExpansionSlots: 7,
+      maxPowerConnectors: 8
+    },
+    slotUsage: {
+      m2SlotsUsed: 0,
+      sataConnectorsUsed: 0,
+      memorySlotUsed: 0,
+      fanMountsUsed: 0,
+      expansionSlotsUsed: 0,
+      powerConnectorsUsed: 0
+    },
+    totalPrice: config.totalPrice,
+    totalPowerConsumption: config.totalPowerConsumption,
+    budget: config.budget,
+    createdAt: config.createdAt,
+    updatedAt: config.updatedAt,
+    description: config.description,
+    tags: config.tags,
+    limitChecks: {
+      isValid: true,
+      violations: []
+    }
+  };
 }
 
 // PC構成の別名（互換性のため）
