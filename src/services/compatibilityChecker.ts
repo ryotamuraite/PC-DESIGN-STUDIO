@@ -489,13 +489,13 @@ export class CompatibilityCheckerService {
     }
     
     // 基本的な互換性パターン
-    const compatibilityMap: Record<string, string[]> = {
+    const compatibilityMap = {
       '8pin': ['8pin', '6+2pin'],
       '6pin': ['6pin'],
       '8pin_cpu': ['8pin_cpu', '4+4pin'],
       '4pin': ['4pin', '4+4pin'],
       '24pin': ['24pin']
-    };
+    } as const;
     
     const compatibleConnectors = compatibilityMap[required] || [required];
     return compatibleConnectors.includes(available);

@@ -1,7 +1,7 @@
 // src/services/storage/localStorageService.ts
 // ExtendedPCConfiguration用LocalStorage管理サービス
 
-import { ExtendedPCConfiguration } from '@/types';
+import { ExtendedPCConfiguration } from '@/types/extended';
 
 const STORAGE_KEYS = {
   EXTENDED_CONFIGURATION: 'pc-design-studio:extended-configuration',

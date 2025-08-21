@@ -9,6 +9,10 @@ import ConfigSummary from "@/components/summary/ConfigSummary";
 import { IntegratedPartSelector } from "@/components/integrated-selector";
 // 🚧 Phase 2.5: 複数搭載対応システムインポート
 import { MultiPartManager } from "@/components/multi-part";
+// 🚧 Phase 3: アップグレード診断システムインポート
+import { PCDiagnostic, UpgradePlanner, UpgradeSimulator } from "@/components/upgrade";
+import { useUpgradePlanner } from "@/hooks/useUpgradePlanner";
+import { BottleneckAnalysis, UpgradeRecommendation, SimulationResult } from "@/types/upgrade";
 import {
   compatibleCombinations,
   sampleParts,
@@ -17,22 +21,23 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useTabVisibility, TAB_VISIBILITY_PHASES } from "@/hooks/ui/useTabVisibility";
 // 🚧 Phase 2.5: データ永続化統合
 import { useExtendedConfiguration } from "@/hooks/useExtendedConfiguration";
-import { 
-  PCConfiguration, 
-  ExtendedPCConfiguration,
-  convertToExtendedConfiguration,
-  convertToLegacyConfiguration,
-  Part, 
-  PartCategory 
+import {
+PCConfiguration, 
+Part, 
+PartCategory 
 } from "@/types";
+import { ExtendedPCConfiguration } from "@/types/extended";
 import React, { useState } from "react";
 // 🎨 ロゴファイルのimport - Viteベースパス対応
 import logoSvg from "/assets/logo.svg";
 
-// 統合ダッシュボード用の型定義（Phase 2.5: 複数搭載対応タブ追加）
+// 統合ダッシュボード用の型定義（Phase 3: アップグレード診断・プランナー・シミュレータータブ追加）
 type TabType =
   | "builder"
   | "multipart" // 🚧 Phase 2.5: 複数搭載対応システム
+  | "upgrade"   // 🚧 Phase 3: アップグレード診断システム
+  | "planner"   // 🚧 Phase 3: アップグレードプランナーシステム
+  | "simulator" // 🎆 Phase 3 Week3: アップグレードシミュレーターシステム
   | "power"
   | "compatibility"
   | "search"
@@ -112,6 +117,15 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>("builder");
   const { success, warning } = useNotifications();
 
+  // 🚧 Phase 3: アップグレード診断・プランナー・シミュレーター状態管理
+  const [plannerState, plannerActions] = useUpgradePlanner();
+  
+  // 診断結果の共有状態
+  const [sharedAnalysis, setSharedAnalysis] = useState<BottleneckAnalysis | null>(null);
+  
+  // 🎆 Phase 3 Week3: シミュレーター用状態
+  const [selectedPlan, setSelectedPlan] = useState<UpgradeRecommendation | null>(null);
+
   // 🎯 新機能: タブ表示制御（段階的統合対応）
   const {
     isMobile,
@@ -148,6 +162,73 @@ const App: React.FC = () => {
     closeMobileMenu();
   };
 
+  // 🚧 Phase 3: 診断完了後のプランナー自動遷移
+  const handleDiagnosisComplete = async (analysis: BottleneckAnalysis) => {
+    try {
+      // 共有状態を更新
+      setSharedAnalysis(analysis);
+      
+      // プランナーにプランをロード
+      await plannerActions.loadPlans(analysis);
+      
+      // プランナータブに自動遷移
+      setActiveTab('planner');
+      
+      // 成功通知
+      success(
+        "診断完了！プランナーに移動しました",
+        `${analysis.bottlenecks.length}個のボトルネックを検出 | 総合スコア: ${analysis.overallScore}/100`,
+        "診断→プランナー連携"
+      );
+    } catch (error) {
+      warning(
+        "プランナー連携でエラーが発生しました",
+        error instanceof Error ? error.message : "不明なエラー",
+        "連携エラー"
+      );
+    }
+  };
+
+  // 🚧 Phase 3: プランナーから診断に戻る
+  const handleBackToDiagnosis = () => {
+    setActiveTab('upgrade');
+  };
+
+  // 🚧 Phase 3: プランナーからシミュレーターに遵移
+  const handleBackToPlanner = () => {
+    setActiveTab('planner');
+  };
+
+  // 🚧 Phase 3: プラン採用時の処理（シミュレーター遷移追加）
+  const handlePlanAdopted = (plan: UpgradeRecommendation) => {
+    // プランを選択状態に設定
+    setSelectedPlan(plan);
+    
+    // シミュレータータブに自動遷移
+    setActiveTab('simulator');
+    
+    success(
+      "アップグレードプランを採用しました",
+      `プラン: ${plan.name} | 総コスト: ¥${plan.totalCost.toLocaleString()}`,
+      "プラン採用→シミュレーター"
+    );
+    
+    // プラン実行開始
+    const execution = plannerActions.startExecution(plan);
+    
+    // 必要に応じて実行追跡タブに移動（将来実装）
+    console.log('プラン実行開始:', execution);
+  };
+
+  // 🎆 Phase 3 Week3: シミュレーション完了時の処理
+  const handleSimulationComplete = (result: SimulationResult) => {
+    success(
+      "シミュレーション完了！",
+      `性能向上: ${result.overallImprovement.toFixed(1)}% | ROI: ${result.roi.toFixed(2)}`,
+      "シミュレーション結果"
+    );
+  };
+
   // 🚧 Phase 2.5: 既存PCConfiguration状態管理
   const [configuration, setConfiguration] = useState<PCConfiguration>({
     id: "config-1",
@@ -175,12 +256,9 @@ const App: React.FC = () => {
   const {
     configuration: extendedConfiguration,
     updateConfiguration: setExtendedConfiguration,
-    saveConfiguration: saveExtendedConfiguration,
-    isLoading: isExtendedConfigLoading,
     isSaving: isExtendedConfigSaving,
     hasUnsavedChanges: hasExtendedUnsavedChanges,
-    lastSavedAt: extendedLastSavedAt,
-    history: extendedConfigHistory
+    lastSavedAt: extendedLastSavedAt
   } = useExtendedConfiguration({
     autoSave: true,
     autoSaveInterval: 30000, // 30秒
@@ -371,6 +449,39 @@ const App: React.FC = () => {
                 >
                   🚧 複数搭載
                 </button>
+                {/* 🚧 Phase 3: アップグレード診断タブ */}
+                <button
+                  onClick={() => handleTabSwitch("upgrade")}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                    (activeTab as TabType) === "upgrade"
+                      ? "bg-purple-100 text-purple-700"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  🔄 診断
+                </button>
+                {/* 🚧 Phase 3: アップグレードプランナータブ */}
+                <button
+                  onClick={() => handleTabSwitch("planner")}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                    (activeTab as TabType) === "planner"
+                      ? "bg-green-100 text-green-700"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  📋 プランナー
+                </button>
+                {/* 🎆 Phase 3 Week3: アップグレードシミュレータータブ */}
+                <button
+                  onClick={() => handleTabSwitch("simulator")}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                    (activeTab as TabType) === "simulator"
+                      ? "bg-purple-100 text-purple-700"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  🎯 シミュレーター
+                </button>
                 <button
                   onClick={() => handleTabSwitch("power")}
                   className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
@@ -473,6 +584,39 @@ const App: React.FC = () => {
                         }`}
                       >
                         🚧 複数搭載
+                      </button>
+                      {/* 🚧 Phase 3: モバイルメニューにアップグレード診断タブ追加 */}
+                      <button
+                        onClick={() => handleTabSwitch("upgrade")}
+                        className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left ${
+                          (activeTab as TabType) === "upgrade"
+                            ? "bg-purple-50 text-purple-700 font-medium"
+                            : ""
+                        }`}
+                      >
+                        🔄 診断
+                      </button>
+                      {/* 🚧 Phase 3: モバイルメニューにアップグレードプランナータブ追加 */}
+                      <button
+                        onClick={() => handleTabSwitch("planner")}
+                        className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left ${
+                          (activeTab as TabType) === "planner"
+                            ? "bg-green-50 text-green-700 font-medium"
+                            : ""
+                        }`}
+                      >
+                        📋 プランナー
+                      </button>
+                      {/* 🎆 Phase 3 Week3: モバイルメニューにアップグレードシミュレータータブ追加 */}
+                      <button
+                        onClick={() => handleTabSwitch("simulator")}
+                        className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left ${
+                          (activeTab as TabType) === "simulator"
+                            ? "bg-purple-50 text-purple-700 font-medium"
+                            : ""
+                        }`}
+                      >
+                        🎯 シミュレーター
                       </button>
                       <button
                         onClick={() => handleTabSwitch("power")}
@@ -577,6 +721,180 @@ const App: React.FC = () => {
               />
             ) : (
               <div className="h-full px-4 sm:px-6 lg:px-8 py-8 overflow-y-auto">
+                {/* 🚧 Phase 3: アップグレード診断システムタブ */}
+                {(activeTab as TabType) === "upgrade" && (
+                  <div className="space-y-6">
+                    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                            <span className="text-purple-600 text-sm font-bold">🔄</span>
+                          </div>
+                        </div>
+                        <div className="ml-3">
+                          <h3 className="text-sm font-medium text-purple-800">
+                            🚧 Phase 3 新機能: アップグレード診断システム
+                          </h3>
+                          <p className="text-xs text-purple-700 mt-1">
+                            既存PCの詳細分析とボトルネック診断で、最適なアップグレードプランを提案します。
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* PCDiagnosticコンポーネント - 連携機能付き */}
+                    <PCDiagnostic 
+                      onDiagnosisComplete={handleDiagnosisComplete}
+                    />
+                  </div>
+                )}
+
+                {/* 🚧 Phase 3: アップグレードプランナーシステムタブ */}
+                {(activeTab as TabType) === "planner" && (
+                  <div className="space-y-6">
+                    <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                            <span className="text-green-600 text-sm font-bold">📋</span>
+                          </div>
+                        </div>
+                        <div className="ml-3">
+                          <h3 className="text-sm font-medium text-green-800">
+                            🚧 Phase 3 新機能: アップグレードプランナーシステム
+                          </h3>
+                          <p className="text-xs text-green-700 mt-1">
+                            診断結果から最適なアップグレードプランを策定・比較・カスタマイズします。
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 診断結果の状態チェック */}
+                    {!sharedAnalysis ? (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                        <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <span className="text-2xl">⚠️</span>
+                        </div>
+                        <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+                          診断結果が必要です
+                        </h3>
+                        <p className="text-sm text-yellow-700 mb-4">
+                          プランナーを使用するには、まずアップグレード診断を実行してください。
+                        </p>
+                        <button
+                          onClick={handleBackToDiagnosis}
+                          className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                        >
+                          🔄 診断タブに移動
+                        </button>
+                      </div>
+                    ) : (
+                      /* UpgradePlannerコンポーネント */
+                      <UpgradePlanner
+                        analysis={sharedAnalysis}
+                        recommendations={plannerState.availablePlans}
+                        onBack={handleBackToDiagnosis}
+                        onPlanGenerated={handlePlanAdopted}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* 🎆 Phase 3 Week3: アップグレードシミュレーターシステムタブ */}
+                {(activeTab as TabType) === "simulator" && (
+                  <div className="space-y-6">
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                            <span className="text-purple-600 text-sm font-bold">🎯</span>
+                          </div>
+                        </div>
+                        <div className="ml-3">
+                          <h3 className="text-sm font-medium text-purple-800">
+                            🎆 Phase 3 Week3 新機能: アップグレードシミュレーターシステム
+                          </h3>
+                          <p className="text-xs text-purple-700 mt-1">
+                            プランの性能向上をインタラクティブにシミュレーションし、Before/After比較やROI分析を実行します。
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* プラン選択の状態チェック */}
+                    {!selectedPlan || !sharedAnalysis ? (
+                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-center">
+                        <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <span className="text-2xl">⚠️</span>
+                        </div>
+                        <h3 className="text-lg font-semibold text-orange-800 mb-2">
+                          プラン選択が必要です
+                        </h3>
+                        <p className="text-sm text-orange-700 mb-4">
+                          シミュレーターを使用するには、まずアップグレードプランを選択してください。
+                        </p>
+                        <div className="flex justify-center space-x-4">
+                          {!sharedAnalysis ? (
+                            <button
+                              onClick={handleBackToDiagnosis}
+                              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                            >
+                              🔄 診断タブに移動
+                            </button>
+                          ) : (
+                            <button
+                              onClick={handleBackToPlanner}
+                              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                            >
+                              📋 プランナーに移動
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      /* UpgradeSimulatorコンポーネント */
+                      <UpgradeSimulator
+                        plan={selectedPlan}
+                        currentConfig={{
+                          id: configuration.id,
+                          name: configuration.name,
+                          currentParts: {
+                            cpu: configuration.parts.cpu,
+                            motherboard: configuration.parts.motherboard,
+                            memory: configuration.parts.memory ? [configuration.parts.memory] : [],
+                            gpu: configuration.parts.gpu,
+                            storage: configuration.parts.storage ? [configuration.parts.storage] : [],
+                            psu: configuration.parts.psu,
+                            case: configuration.parts.case,
+                            cooler: configuration.parts.cooler,
+                            other: []
+                          },
+                          pcInfo: {
+                            condition: 'good' as const,
+                            usage: 'gaming' as const,
+                            dailyUsageHours: 8,
+                            location: 'home' as const
+                          },
+                          constraints: {
+                            budget: configuration.budget || 150000,
+                            timeframe: 'flexible' as const,
+                            priority: 'performance' as const,
+                            keepParts: [],
+                            replaceParts: [],
+                            maxComplexity: 'moderate' as const
+                          },
+                          createdAt: configuration.createdAt,
+                          lastUpdated: configuration.updatedAt,
+                          version: '1.0'
+                        }}
+                        onBack={handleBackToPlanner}
+                        onSimulationComplete={handleSimulationComplete}
+                      />
+                    )}
+                  </div>
+                )}
+
                 {/* 🚧 Phase 2.5: 複数搭載対応システムタブ */}
                 {(activeTab as TabType) === "multipart" && (
                   <div className="space-y-6">

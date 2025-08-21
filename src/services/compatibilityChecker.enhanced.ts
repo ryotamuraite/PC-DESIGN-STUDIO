@@ -258,7 +258,8 @@ export class EnhancedCompatibilityCheckerService {
   private checkMemoryCompatibilityEnhanced(config: PCConfiguration): MemoryCompatibility {
     const memory = config.parts.memory;
     const motherboard = config.parts.motherboard;
-    // const cpu = config.parts.cpu; // 将来の拡張用（現在未使用）
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _cpu = config.parts.cpu; // 将来の拡張用（現在未使用）
 
     if (!memory || !motherboard) {
       return {
@@ -285,7 +286,8 @@ export class EnhancedCompatibilityCheckerService {
     const capacityCompatible = !memoryCapacity || memoryCapacity <= maxCapacity;
     
     // メモリスピード互換性チェック
-    // let speedCompatible = true; // 今後の拡張用
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _speedCompatible = true; // 今後の拡張用
     let speedWarning = '';
     if (memorySpeed && memoryInfo) {
       const isJedecStandard = memoryInfo.standardSpeeds.includes(memorySpeed);
@@ -861,13 +863,13 @@ export class EnhancedCompatibilityCheckerService {
   private isConnectorCompatibleEnhanced(required: string, available: string): boolean {
     if (required === available) return true;
     
-    const compatibilityMap: Record<string, string[]> = {
+    const compatibilityMap = {
       '8pin_cpu': ['8pin_cpu', '4+4pin'],
-      '4pin': ['4pin', '4+4pin'],
+      '4pin': ['4pin', '4+4pin'],  
       '8pin_pcie': ['8pin_pcie', '6+2pin'],
       '6pin_pcie': ['6pin_pcie', '6+2pin'],
       '24pin': ['24pin']
-    };
+    } as const;
     
     const compatibleConnectors = compatibilityMap[required] || [required];
     return compatibleConnectors.includes(available);
@@ -888,7 +890,7 @@ export class EnhancedCompatibilityCheckerService {
   }
 
   private getHigherTier(currentTier: string): string {
-    const tiers = ['entry', 'mainstream', 'high-end', 'flagship'];
+    const tiers = ['entry', 'mainstream', 'high-end', 'flagship'] as const;
     const currentIndex = tiers.indexOf(currentTier);
     return currentIndex < tiers.length - 1 ? tiers[currentIndex + 1] : currentTier;
   }
@@ -911,13 +913,17 @@ export class EnhancedCompatibilityCheckerService {
     return Math.round(cpuScore + gpuScore);
   }
 
-  private predictFrameRates(_cpuTier: string, gpuTier: string): Record<string, number> {
+  private predictFrameRates(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _cpuTier: string, 
+    gpuTier: string
+  ): Record<string, number> {
     const baseFrameRates: Record<string, Record<string, number>> = {
-      'entry': { '1080p': 45, '1440p': 30, '4K': 20 },
-      'mainstream': { '1080p': 75, '1440p': 55, '4K': 35 },
-      'high-end': { '1080p': 120, '1440p': 95, '4K': 65 },
-      'flagship': { '1080p': 165, '1440p': 140, '4K': 95 }
-    };
+    'entry': { '1080p': 45, '1440p': 30, '4K': 20 },
+    'mainstream': { '1080p': 75, '1440p': 55, '4K': 35 },
+    'high-end': { '1080p': 120, '1440p': 95, '4K': 65 },
+    'flagship': { '1080p': 165, '1440p': 140, '4K': 95 }
+    } as const;
 
     return baseFrameRates[gpuTier] || baseFrameRates['entry'];
   }
@@ -928,7 +934,7 @@ export class EnhancedCompatibilityCheckerService {
       'mainstream': '1080p',
       'high-end': '1440p',
       'flagship': '4K'
-    };
+    } as const;
 
     return resolutionMap[gpuTier] || '1080p';
   }

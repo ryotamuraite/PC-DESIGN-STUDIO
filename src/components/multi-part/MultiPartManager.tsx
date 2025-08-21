@@ -11,7 +11,6 @@ import {
   HardDrive,
   Monitor,
   Fan,
-  Zap,
   Cpu,
   Layers,
   Settings,
@@ -70,7 +69,7 @@ export const MultiPartManager: React.FC<MultiPartManagerProps> = ({
 
   // 🚀 物理制限の自動計算（精密化版）
   const calculatedLimits = useMemo((): PhysicalLimits => {
-    const { motherboard, case: pcCase, psu } = configuration.coreComponents;
+    const { motherboard, case: pcCase } = configuration.coreComponents;
     
     // マザーボード仕様をデータベースから取得
     const mbSpec = getMotherboardSpec(motherboard?.specifications?.chipset as string) || defaultMotherboardSpec;
@@ -221,7 +220,7 @@ export const MultiPartManager: React.FC<MultiPartManagerProps> = ({
   }, []);
 
   // 🎨 アニメーション効果
-  const triggerPartAnimation = useCallback((partId: string, action: 'add' | 'remove') => {
+  const triggerPartAnimation = useCallback((partId: string) => {
     setAnimatingParts(prev => new Set(prev).add(partId));
     setRecentChanges(prev => new Set(prev).add(partId));
     
@@ -278,7 +277,7 @@ export const MultiPartManager: React.FC<MultiPartManagerProps> = ({
       });
       
       // 🎨 アニメーション効果
-      triggerPartAnimation(part.id, 'add');
+      triggerPartAnimation(part.id);
     } else if (partSelection.mode === 'additional') {
       // 追加パーツの選択
       const category = partSelection.category as keyof AdditionalComponents;
@@ -293,7 +292,7 @@ export const MultiPartManager: React.FC<MultiPartManagerProps> = ({
       });
       
       // 🎨 アニメーション効果
-      triggerPartAnimation(part.id, 'add');
+      triggerPartAnimation(part.id);
     }
     
     // ダイアログを閉じる
@@ -325,7 +324,7 @@ export const MultiPartManager: React.FC<MultiPartManagerProps> = ({
     
     // 🎨 アニメーション効果
     if (removedPart) {
-      triggerPartAnimation(removedPart.id, 'remove');
+      triggerPartAnimation(removedPart.id);
     }
   }, [configuration, updateConfiguration, triggerPartAnimation]);
 
@@ -356,7 +355,7 @@ export const MultiPartManager: React.FC<MultiPartManagerProps> = ({
     
     // 🎨 アニメーション効果
     if (removedPart) {
-      triggerPartAnimation(removedPart.id, 'remove');
+      triggerPartAnimation(removedPart.id);
     }
   }, [configuration, updateConfiguration, triggerPartAnimation]);
 

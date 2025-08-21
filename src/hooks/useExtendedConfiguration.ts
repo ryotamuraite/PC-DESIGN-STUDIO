@@ -2,7 +2,7 @@
 // ExtendedPCConfiguration管理用カスタムフック（LocalStorage連携）
 
 import { useCallback, useEffect, useState } from 'react';
-import { ExtendedPCConfiguration, convertToExtendedConfiguration } from '@/types';
+import { ExtendedPCConfiguration, convertToExtendedConfiguration } from '@/types/extended';
 import { localStorageService, ConfigurationHistory } from '@/services/storage/localStorageService';
 
 export interface UseExtendedConfigurationOptions {
@@ -16,7 +16,6 @@ export interface UseExtendedConfigurationOptions {
 export const useExtendedConfiguration = (options: UseExtendedConfigurationOptions = {}) => {
   const {
     autoSave = true,
-    autoSaveInterval = 30000, // 30秒
     onSave,
     onLoad,
     onError

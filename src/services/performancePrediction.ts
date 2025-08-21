@@ -4,6 +4,36 @@
 import { PCConfiguration } from '@/types';
 import performanceData from '@/data/compatibility/performance-database.json';
 
+// 🔧 CPU・GPU性能データの型定義（型安全性向上）
+interface CpuPerformanceData {
+  benchmarkScores: {
+    singleCore: number;
+    multiCore: number;
+    gaming: number;
+  };
+  tier: string;
+  architecture?: string;
+}
+
+interface GpuPerformanceData {
+  benchmarkScores: {
+    '1080': number;
+    '1440': number;
+    '4': number; // 4K
+    productivity: number;
+    rayTracing: number;
+  };
+  architecture: string;
+  tier: string;
+}
+
+interface MemoryData {
+  specifications?: {
+    capacity?: number;
+    modules?: number;
+  };
+}
+
 // パフォーマンス予測結果の型定義
 export interface PerformancePredictionResult {
   overallScore: number; // 0-100の総合スコア
@@ -122,26 +152,24 @@ export class PerformancePredictionService {
     };
   }
 
-  // CPU性能データ取得
-  private getCpuPerformanceData(cpuName: string): unknown {
+  // CPU性能データ取得（🔧 型安全性向上）
+  private getCpuPerformanceData(cpuName: string): CpuPerformanceData | null {
     // CPU名を正規化して検索
     const normalizedName = this.normalizeCpuName(cpuName);
-    return (this.database.cpuPerformanceData as Record<string, unknown>)[normalizedName] || null;
+    return (this.database.cpuPerformanceData as Record<string, CpuPerformanceData>)[normalizedName] || null;
   }
 
-  // GPU性能データ取得
-  private getGpuPerformanceData(gpuName: string): unknown {
+  // GPU性能データ取得（🔧 型安全性向上）
+  private getGpuPerformanceData(gpuName: string): GpuPerformanceData | null {
     // GPU名を正規化して検索
     const normalizedName = this.normalizeGpuName(gpuName);
-    return (this.database.gpuPerformanceData as Record<string, unknown>)[normalizedName] || null;
+    return (this.database.gpuPerformanceData as Record<string, GpuPerformanceData>)[normalizedName] || null;
   }
 
-  // ボトルネック分析実行
-  private analyzeBottleneck(cpuData: unknown, gpuData: unknown): BottleneckAnalysis {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const cpuScore = (cpuData as any)?.benchmarkScores?.gaming || 100;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const gpuScore = (gpuData as any)?.benchmarkScores?.['1440p'] || 100; // 基準解像度
+  // ボトルネック分析実行（🔧 型安全性向上）
+  private analyzeBottleneck(cpuData: CpuPerformanceData | null, gpuData: GpuPerformanceData | null): BottleneckAnalysis {
+    const cpuScore = cpuData?.benchmarkScores?.gaming || 100;
+    const gpuScore = gpuData?.benchmarkScores?.['1440'] || 100; // 基準解像度
     const ratio = cpuScore / gpuScore;
 
     const thresholds = this.database.bottleneckAnalysis.thresholds;
@@ -195,14 +223,19 @@ export class PerformancePredictionService {
     };
   }
 
-  // 解像度別影響分析
-  private analyzeResolutionImpact(_cpuData: unknown, _gpuData: unknown, ratio: number) {
+  // 解像度別影響分析（🔧 型安全性向上）
+  private analyzeResolutionImpact(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _cpuData: CpuPerformanceData | null, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _gpuData: GpuPerformanceData | null, 
+    ratio: number
+  ) {
     const resolutions = ['1080p', '1440p', '4K'];
     const impact: Record<string, { cpuBound: boolean; gpuBound: boolean }> = {};
 
     resolutions.forEach(resolution => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const factors = (this.database.bottleneckAnalysis.resolutionFactors as any)[resolution];
+      const factors = (this.database.bottleneckAnalysis.resolutionFactors as Record<string, { cpuWeight: number; gpuWeight: number }>)[resolution];
       const adjustedRatio = ratio * (factors.cpuWeight / factors.gpuWeight);
       
       impact[resolution] = {
@@ -214,9 +247,8 @@ export class PerformancePredictionService {
     return impact;
   }
 
-  // ゲーミング性能予測
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private predictGamingPerformance(cpuData: any, gpuData: any, bottleneck: BottleneckAnalysis): GamingPerformanceResult {
+  // ゲーミング性能予測（🔧 型安全性向上）
+  private predictGamingPerformance(cpuData: CpuPerformanceData, gpuData: GpuPerformanceData, bottleneck: BottleneckAnalysis): GamingPerformanceResult {
     const resolutions = ['1080p', '1440p', '4K'];
     const games = Object.keys(this.database.gamePerformanceProfiles);
     
@@ -238,8 +270,7 @@ export class PerformancePredictionService {
     // ゲーム別FPS予測
     const gameSpecificFps: Record<string, Record<string, number>> = {};
     games.forEach(game => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const gameProfile = (this.database.gamePerformanceProfiles as any)[game];
+      const gameProfile = (this.database.gamePerformanceProfiles as Record<string, { performanceMultipliers: Record<string, number> }>)[game];
       gameSpecificFps[game] = {};
       
       resolutions.forEach(resolution => {
@@ -284,9 +315,8 @@ export class PerformancePredictionService {
     };
   }
 
-  // 用途別スコア算出
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private calculateUseCaseScores(cpuData: any, gpuData: any, memory?: any): UseCaseScores {
+  // 用途別スコア算出（🔧 型安全性向上）
+  private calculateUseCaseScores(cpuData: CpuPerformanceData, gpuData: GpuPerformanceData, memory?: MemoryData): UseCaseScores {
     const useCases = this.database.useCaseProfiles;
     const scores: Record<string, number> = {};
     const details: Record<string, { score: number; explanation: string }> = {};
@@ -349,9 +379,15 @@ export class PerformancePredictionService {
     };
   }
 
-  // 推奨事項生成
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private generateRecommendations(_cpuData: any, _gpuData: any, bottleneck: BottleneckAnalysis, scores: UseCaseScores): PerformanceRecommendation[] {
+  // 推奨事項生成（🔧 型安全性向上）
+  private generateRecommendations(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _cpuData: CpuPerformanceData, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _gpuData: GpuPerformanceData, 
+    bottleneck: BottleneckAnalysis, 
+    scores: UseCaseScores
+  ): PerformanceRecommendation[] {
     const recommendations: PerformanceRecommendation[] = [];
 
     // ボトルネック解消推奨
@@ -392,45 +428,46 @@ export class PerformancePredictionService {
     return recommendations;
   }
 
-  // 最適化提案生成
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private generateOptimizations(_cpuData: unknown, gpuData: unknown, _unusedBottleneck: BottleneckAnalysis): OptimizationSuggestion[] {
+  // 最適化提案生成（🔧 型安全性向上）
+  private generateOptimizations(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _cpuData: CpuPerformanceData, 
+    gpuData: GpuPerformanceData, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _bottleneck: BottleneckAnalysis
+  ): OptimizationSuggestion[] {
     const optimizations: OptimizationSuggestion[] = [];
 
     // DLSS/FSR設定提案
-    if (gpuData && typeof gpuData === 'object' && 'architecture' in gpuData) {
-      const architecture = (gpuData as { architecture: string }).architecture;
-      if (architecture === 'Ada Lovelace' || architecture === 'Ampere') {
-        optimizations.push({
-          category: 'settings',
-          title: 'DLSS有効化推奨',
-          description: 'ゲーム設定でDLSSを有効にすることで、画質を保ちつつFPSを大幅に向上できます。',
-          impact: 'high',
-          difficulty: 'easy'
-        });
-      } else if (architecture === 'RDNA 3') {
-        optimizations.push({
-          category: 'settings',
-          title: 'FSR有効化推奨',
-          description: 'ゲーム設定でFSRを有効にすることで、画質を保ちつつFPSを向上できます。',
-          impact: 'medium',
-          difficulty: 'easy'
-        });
-      }
+    const architecture = gpuData.architecture;
+    if (architecture === 'Ada Lovelace' || architecture === 'Ampere') {
+      optimizations.push({
+        category: 'settings',
+        title: 'DLSS有効化推奨',
+        description: 'ゲーム設定でDLSSを有効にすることで、画質を保ちつつFPSを大幅に向上できます。',
+        impact: 'high',
+        difficulty: 'easy'
+      });
+    } else if (architecture === 'RDNA 3') {
+      optimizations.push({
+        category: 'settings',
+        title: 'FSR有効化推奨',
+        description: 'ゲーム設定でFSRを有効にすることで、画質を保ちつつFPSを向上できます。',
+        impact: 'medium',
+        difficulty: 'easy'
+      });
     }
 
     // メモリオーバークロック提案
-    if (_cpuData && typeof _cpuData === 'object' && 'tier' in _cpuData) {
-      const tier = (_cpuData as { tier: string }).tier;
-      if (tier === 'flagship' || tier === 'high-end') {
-        optimizations.push({
-          category: 'hardware',
-          title: 'メモリオーバークロック',
-          description: 'メモリをオーバークロックすることで、CPU性能を引き出し、フレームレートを向上できます。',
-          impact: 'medium',
-          difficulty: 'medium'
-        });
-      }
+    const tier = _cpuData.tier;
+    if (tier === 'flagship' || tier === 'high-end') {
+      optimizations.push({
+        category: 'hardware',
+        title: 'メモリオーバークロック',
+        description: 'メモリをオーバークロックすることで、CPU性能を引き出し、フレームレートを向上できます。',
+        impact: 'medium',
+        difficulty: 'medium'
+      });
     }
 
     return optimizations;
@@ -495,8 +532,8 @@ export class PerformancePredictionService {
     return name;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private getMemoryCapacity(memory: any): number {
+  // 🔧 メモリ容量取得（型安全性向上）
+  private getMemoryCapacity(memory: MemoryData): number {
     // メモリ容量を取得（GB単位）
     const capacity = memory.specifications?.capacity || 16;
     const modules = memory.specifications?.modules || 1;
