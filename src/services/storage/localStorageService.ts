@@ -177,7 +177,7 @@ export class LocalStorageService {
   }
 
   /**
-   * 自動保存開始
+   * 自動保存開始（重複実行防止強化版）
    */
   startAutoSave(
     configuration: PCConfiguration,
@@ -185,29 +185,50 @@ export class LocalStorageService {
   ): void {
     const config = this.getStorageConfig();
     if (!config.autoSaveEnabled) {
+      console.log('🛑 Auto-save disabled in config');
       return;
     }
 
+    // 重複実行を完全ブロック
+    if (this.autoSaveTimer) {
+      console.log('⚠️ Auto-save already running, ignoring duplicate request');
+      return;
+    }
+
+    // 既存タイマーを確実停止
     this.stopAutoSave();
     
     this.autoSaveTimer = setInterval(() => {
       if (this.currentConfig && this.hasConfigurationChanged(configuration)) {
-        this.saveConfiguration(configuration);
-        onSave?.(configuration);
+        const success = this.saveConfiguration(configuration);
+        if (success) {
+          onSave?.(configuration);
+          console.log('💾 Auto-save executed successfully');
+        } else {
+          console.error('❌ Auto-save failed');
+        }
+      } else {
+        console.log('🔄 Auto-save: No changes detected');
       }
     }, config.autoSaveInterval);
 
-    console.log(`Auto-save started with interval: ${config.autoSaveInterval}ms`);
+    console.log(`✅ Auto-save started with interval: ${config.autoSaveInterval}ms (Timer ID: ${this.autoSaveTimer})`);
+    
+    // 初回保存を実行
+    this.currentConfig = configuration;
   }
 
   /**
-   * 自動保存停止
+   * 自動保存停止（強化版）
    */
   stopAutoSave(): void {
     if (this.autoSaveTimer) {
+      const timerId = this.autoSaveTimer;
       clearInterval(this.autoSaveTimer);
       this.autoSaveTimer = null;
-      console.log('Auto-save stopped');
+      console.log(`🛑 Auto-save stopped (Timer ID: ${timerId})`);
+    } else {
+      console.log('📝 Auto-save: No active timer to stop');
     }
   }
 
@@ -242,7 +263,7 @@ export class LocalStorageService {
       const saved = localStorage.getItem(STORAGE_KEYS.USER_PREFERENCES);
       const defaultConfig: StorageConfig = {
         autoSaveEnabled: true,
-        autoSaveInterval: 30000, // 30秒
+        autoSaveInterval: 60000, // 60秒に変更（無限ループ対策）
         maxHistoryCount: 20
       };
 

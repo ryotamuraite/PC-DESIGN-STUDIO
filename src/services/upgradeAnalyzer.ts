@@ -884,7 +884,9 @@ export class UpgradeAnalyzer {
 
   // パーツ情報抽出関数群（実装簡略化）
   private calculatePerformanceScore(part: Part, category: PartCategory): number {
-    const key = `${category}:${part.manufacturer.toLowerCase()}:${part.model?.toLowerCase()}`;
+    const manufacturer = part.manufacturer?.toLowerCase() || 'unknown';
+    const model = part.model?.toLowerCase() || part.name?.toLowerCase() || 'unknown';
+    const key = `${category}:${manufacturer}:${model}`;
     return this.performanceDatabase.get(key) || 50; // デフォルト50
   }
 

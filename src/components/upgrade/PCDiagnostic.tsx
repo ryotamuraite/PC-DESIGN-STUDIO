@@ -63,10 +63,22 @@ export const PCDiagnostic: React.FC<PCDiagnosticProps> = ({ onBack, onDiagnosisC
 
   // 診断実行
   const handleDiagnosis = async () => {
-    if (!pcConfig.name || Object.values(pcConfig.currentParts || {}).every(part => 
-      part === null || (Array.isArray(part) && part.length === 0)
-    )) {
-      setError('PC名と最低1つのパーツ情報を入力してください');
+    if (!pcConfig.name) {
+      setError('PC名を入力してください');
+      return;
+    }
+    
+    const hasParts = pcConfig.currentParts && (
+      pcConfig.currentParts.cpu ||
+      pcConfig.currentParts.gpu ||
+      (pcConfig.currentParts.memory && pcConfig.currentParts.memory.length > 0) ||
+      (pcConfig.currentParts.storage && pcConfig.currentParts.storage.length > 0) ||
+      pcConfig.currentParts.psu ||
+      pcConfig.currentParts.motherboard
+    );
+    
+    if (!hasParts) {
+      setError('「サンプルデータ設定」ボタンでパーツ情報を設定してから診断を実行してください');
       return;
     }
 
@@ -317,28 +329,98 @@ const PCConfigurationInput: React.FC<PCConfigurationInputProps> = ({
           🔧 主要パーツ情報
         </h3>
         
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-          <p className="text-blue-700 text-sm">
-            💡 現在はサンプルデータで診断を実行します。詳細なパーツ選択機能は次回アップデートで追加予定です。
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+          <p className="text-green-700 text-sm">
+            💡 サンプルデータを自動設定します。「サンプルデータ設定」ボタンで診断実行が可能になります。
           </p>
         </div>
 
-        {/* サンプルパーツ表示 */}
+        {/* サンプルデータ設定ボタン */}
+        <div className="text-center mb-6">
+          <button
+            onClick={() => {
+              const sampleParts = {
+                cpu: {
+                  id: 'sample-cpu',
+                  name: 'Intel Core i5-12400F',
+                  category: 'cpu' as const,
+                  price: 25800,
+                  manufacturer: 'Intel',
+                  specifications: { socket: 'LGA1700', cores: 6, threads: 12, baseFreq: '2.5GHz', boostFreq: '4.4GHz' }
+                },
+                gpu: {
+                  id: 'sample-gpu',
+                  name: 'NVIDIA RTX 3060',
+                  category: 'gpu' as const,
+                  price: 42800,
+                  manufacturer: 'NVIDIA',
+                  specifications: { memory: '12GB GDDR6', memoryInterface: '192-bit', coreClock: '1320MHz', boostClock: '1777MHz' }
+                },
+                motherboard: {
+                  id: 'sample-mb',
+                  name: 'B550 Chipset',
+                  category: 'motherboard' as const,
+                  price: 15200,
+                  manufacturer: 'ASUS',
+                  specifications: { socket: 'LGA1700', chipset: 'B550', memorySlots: 4, maxMemory: '128GB', formFactor: 'ATX' }
+                },
+                memory: [{
+                  id: 'sample-mem',
+                  name: 'DDR4-3200 16GB',
+                  category: 'memory' as const,
+                  price: 8900,
+                  manufacturer: 'Corsair',
+                  specifications: { type: 'DDR4', speed: '3200MHz', capacity: '16GB', modules: '2x8GB', timings: 'CL16' }
+                }],
+                storage: [{
+                  id: 'sample-ssd',
+                  name: 'NVMe SSD 500GB',
+                  category: 'storage' as const,
+                  price: 7800,
+                  manufacturer: 'Samsung',
+                  specifications: { type: 'SSD', interface: 'NVMe PCIe 4.0', capacity: '500GB', readSpeed: '7000MB/s', writeSpeed: '5300MB/s' }
+                }],
+                psu: {
+                  id: 'sample-psu',
+                  name: '650W 80PLUS Bronze',
+                  category: 'psu' as const,
+                  price: 9800,
+                  manufacturer: 'Seasonic',
+                  specifications: { wattage: '650W', efficiency: '80PLUS Bronze', modular: 'Semi-modular', cables: '6+2 PCIe x2' }
+                },
+                case: null,
+                cooler: null,
+                other: []
+              };
+              updateConfig({
+                currentParts: sampleParts
+              });
+            }}
+            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors font-medium"
+          >
+            🎯 サンプルデータ設定
+          </button>
+        </div>
+
+        {/* パーツ情報表示 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
-            { name: 'CPU', icon: '💾', sample: 'Intel Core i5-12400F' },
-            { name: 'GPU', icon: '🎮', sample: 'NVIDIA RTX 3060' },
-            { name: 'メモリ', icon: '💿', sample: 'DDR4-3200 16GB' },
-            { name: 'ストレージ', icon: '💽', sample: 'SSD 500GB' },
-            { name: '電源', icon: '⚡', sample: '650W 80PLUS Bronze' },
-            { name: 'マザーボード', icon: '🔌', sample: 'B550 Chipset' }
+            { key: 'cpu', name: 'CPU', icon: '💾', current: config.currentParts?.cpu?.name || '未設定' },
+            { key: 'gpu', name: 'GPU', icon: '🎮', current: config.currentParts?.gpu?.name || '未設定' },
+            { key: 'memory', name: 'メモリ', icon: '💿', current: config.currentParts?.memory?.[0]?.name || '未設定' },
+            { key: 'storage', name: 'ストレージ', icon: '💽', current: config.currentParts?.storage?.[0]?.name || '未設定' },
+            { key: 'psu', name: '電源', icon: '⚡', current: config.currentParts?.psu?.name || '未設定' },
+            { key: 'motherboard', name: 'マザーボード', icon: '🔌', current: config.currentParts?.motherboard?.name || '未設定' }
           ].map((part) => (
-            <div key={part.name} className="bg-white rounded-lg p-4 border border-gray-200">
+            <div key={part.key} className={`rounded-lg p-4 border ${
+              part.current !== '未設定' ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
+            }`}>
               <div className="flex items-center mb-2">
                 <span className="text-xl mr-2">{part.icon}</span>
                 <span className="font-medium text-gray-800">{part.name}</span>
+                {part.current !== '未設定' && <span className="ml-2 text-green-600">✓</span>}
               </div>
-              <p className="text-sm text-gray-600">{part.sample}</p>
+              <p className="text-sm text-gray-600">{part.current}</p>
             </div>
           ))}
         </div>

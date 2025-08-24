@@ -1,7 +1,7 @@
 // src/hooks/useExtendedConfiguration.ts
 // ExtendedPCConfiguration管理用カスタムフック（LocalStorage連携）
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { PCConfiguration, ExtendedPCConfiguration, convertToExtendedConfiguration } from '@/types';
 import { localStorageService, ConfigurationHistory } from '@/services/storage/localStorageService';
 
@@ -57,8 +57,23 @@ export const useExtendedConfiguration = (options: UseExtendedConfigurationOption
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [history, setHistory] = useState<ConfigurationHistory[]>([]);
 
-  // 初期読み込み
+  // 初期読み込み（重複実行防止版）
+  const initialLoadCompleted = useRef(false);
+  const onLoadRef = useRef(onLoad);
+  const onErrorRef = useRef(onError);
+  
+  // コールバック関数の最新参照を保持
   useEffect(() => {
+    onLoadRef.current = onLoad;
+    onErrorRef.current = onError;
+  }, [onLoad, onError]);
+  
+  useEffect(() => {
+    // 重複実行を完全防止
+    if (initialLoadCompleted.current) {
+      return;
+    }
+    
     const loadConfiguration = async () => {
       setIsLoading(true);
       try {
@@ -67,52 +82,90 @@ export const useExtendedConfiguration = (options: UseExtendedConfigurationOption
           const extendedConfig = convertToExtendedConfiguration(saved);
           setConfiguration(extendedConfig);
           setLastSavedAt(new Date());
-          onLoad?.(extendedConfig);
+          
+          // 安全なコールバック呼び出し
+          if (onLoadRef.current) {
+            onLoadRef.current(extendedConfig);
+          }
         }
         
         // 履歴も読み込み
         const loadedHistory = localStorageService.getConfigurationHistory();
         setHistory(loadedHistory);
         
+        // 初期読み込み完了フラグ設定
+        initialLoadCompleted.current = true;
+        
       } catch (error) {
         console.error('Failed to load configuration:', error);
-        onError?.(error as Error);
+        
+        // 安全なエラーコールバック呼び出し
+        if (onErrorRef.current) {
+          onErrorRef.current(error as Error);
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     loadConfiguration();
-  }, [onLoad, onError]);
+  }, []); // 依存配列を空に変更 - 初回のみ実行
 
-  // 自動保存設定
+  // 自動保存設定（完全修正版 - 無限ループ・タイマー爆発防止）
+  const autoSaveInitialized = useRef(false);
+  const currentConfigRef = useRef(configuration);
+  
+  // configurationの最新値を常にrefで追跡
   useEffect(() => {
-    if (autoSave && !isLoading) {
-      // ExtendedPCConfiguration → PCConfiguration 変換
-      const legacyConfig: PCConfiguration = {
-        id: configuration.id,
-        name: configuration.name,
-        parts: configuration.parts,
-        totalPrice: configuration.totalPrice,
-        totalPowerConsumption: configuration.totalPowerConsumption,
-        budget: configuration.budget,
-        createdAt: configuration.createdAt,
-        updatedAt: configuration.updatedAt,
-        description: configuration.description,
-        tags: configuration.tags
-      };
+    currentConfigRef.current = configuration;
+  }, [configuration]);
+  
+  useEffect(() => {
+    // 初期化チェックで重複実行を完全防止
+    if (autoSave && !isLoading && !autoSaveInitialized.current) {
+      autoSaveInitialized.current = true;
       
-      localStorageService.startAutoSave(legacyConfig, (_savedConfig) => { // eslint-disable-line @typescript-eslint/no-unused-vars
+      // ExtendedPCConfiguration → PCConfiguration 変換関数
+      const convertToLegacyConfig = (config: ExtendedPCConfiguration): PCConfiguration => ({
+        id: config.id,
+        name: config.name,
+        parts: config.parts,
+        totalPrice: config.totalPrice,
+        totalPowerConsumption: config.totalPowerConsumption,
+        budget: config.budget,
+        createdAt: config.createdAt,
+        updatedAt: config.updatedAt,
+        description: config.description,
+        tags: config.tags
+      });
+      
+      const legacyConfig = convertToLegacyConfig(currentConfigRef.current);
+      
+      localStorageService.startAutoSave(legacyConfig, (savedConfig) => {
+        // refを使用してコールバック内で状態更新による再レンダリングを防ぐ
         setLastSavedAt(new Date());
         setHasUnsavedChanges(false);
-        onSave?.(configuration);
+        
+        if (onSave) {
+          onSave(currentConfigRef.current);
+        }
+        
+        console.log('✅ Auto-save completed:', savedConfig.name);
       });
-
-      return () => {
-        localStorageService.stopAutoSave();
-      };
+      
+      console.log('🔄 Auto-save initialized for config:', legacyConfig.name);
     }
-  }, [configuration, autoSave, isLoading, onSave]);
+    
+    // クリーンアップでタイマー確実停止
+    return () => {
+      if (autoSaveInitialized.current) {
+        localStorageService.stopAutoSave();
+        autoSaveInitialized.current = false;
+        console.log('🛑 Auto-save stopped and reset');
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSave, isLoading]); // configurationは依存配列から完全除外
 
   // 手動保存
   const saveConfiguration = useCallback(async (): Promise<boolean> => {
