@@ -20,13 +20,14 @@ import {
 import { useUpgradeSimulator } from '../../hooks/useUpgradeSimulator';
 import {
   UpgradeRecommendation,
-  CurrentPCConfiguration,
   SimulationResult,
   BenchmarkResult,
   PowerAnalysis,
   ThermalResult,
-  ComparisonResult
+  ComparisonResult,
+  PerformanceCategory
 } from '../../types/upgrade';
+import { PartCategory, Part, ExtendedPCConfiguration } from '@/types';
 
 // ===========================================
 // 🎯 メインコンポーネント
@@ -34,7 +35,7 @@ import {
 
 interface UpgradeSimulatorProps {
   plan: UpgradeRecommendation;
-  currentConfig: CurrentPCConfiguration;
+  currentConfig: ExtendedPCConfiguration;
   onBack?: () => void;
   onSimulationComplete?: (result: SimulationResult) => void;
 }
@@ -52,10 +53,117 @@ export const UpgradeSimulator: React.FC<UpgradeSimulatorProps> = ({
   const [activeTab, setActiveTab] = useState<'overview' | 'benchmark' | 'power' | 'thermal' | 'roi'>('overview');
   const [autoRun] = useState(true);
   
+  // ExtendedPCConfiguration を CurrentPCConfiguration に変換する関数
+  const convertToCurrentConfig = (config: ExtendedPCConfiguration) => {
+    // currentPartsを型に合わせて生成（memory/storageは配列型）
+    const currentParts = {
+      cpu: config.parts?.cpu ?? null,
+      gpu: config.parts?.gpu ?? null,
+      motherboard: config.parts?.motherboard ?? null,
+      memory: config.parts?.memory ? [config.parts.memory] : [],  // ✅ Part[]
+      storage: config.parts?.storage ? [config.parts.storage] : [], // ✅ Part[]
+      psu: config.parts?.psu ?? null,
+      case: config.parts?.case ?? null,
+      cooler: config.parts?.cooler ?? null,
+      other: []
+    };
+    
+    return {
+      id: config.id || `temp-${Date.now()}`,
+      name: config.name || `Config-${Date.now()}`,
+      currentParts,
+      pcInfo: config.pcInfo || {
+        condition: 'good' as const,
+        usage: 'mixed' as const,
+        dailyUsageHours: 8,
+        location: 'home' as const
+      },
+      constraints: config.constraints || {
+        budget: 100000,
+        timeframe: 'flexible' as const,
+        priority: 'performance' as const,
+        keepParts: [],
+        replaceParts: [],
+        maxComplexity: 'moderate' as const
+      },
+      createdAt: config.createdAt || new Date(),
+      lastUpdated: config.lastUpdated || new Date(),
+      version: config.version || '1.0'
+    };
+  };
+  
+  // PCConfigurationオブジェクトを作成（ExtendedPCConfigurationから）
+  const createPCConfiguration = (config: ExtendedPCConfiguration) => {
+    // partsをundefinedを完全除去 - Object.fromEntriesでPartCategory型整合性確保
+    const parts = Object.fromEntries(
+      Object.entries(config.parts || {}).map(([key, value]) => [
+        key as PartCategory,  // ✅ PartCategory型にキャスト
+        value ?? null         // ✅ undefinedをnullに統一
+      ])
+    ) as Record<PartCategory, Part | null>;  // ✅ undefined除去でRecord型に強化
+    
+    // 総額計算（Parts価格の合計）
+    const calculateTotalPrice = (parts: Partial<Record<PartCategory, Part | null>>) => {
+      return Object.values(parts).reduce((total, part) => {
+        return total + (part?.price || 0);
+      }, 0);
+    };
+    
+    const totalPrice = config.totalPrice ?? calculateTotalPrice(parts);
+    
+    return {
+      id: config.id || `temp-${Date.now()}`,
+      name: config.name || `Config-${Date.now()}`,
+      parts,
+      totalPrice,
+      totalPowerConsumption: config.totalPowerConsumption,
+      budget: config.budget,
+      createdAt: config.createdAt || new Date(),  // ✅ undefined除去
+      updatedAt: config.lastUpdated || new Date(),
+      description: config.description,
+      tags: config.tags
+    };
+  };
+  
+  // planからアップグレード後のConfigを生成
+  const createAfterConfig = (plan: UpgradeRecommendation, baseConfig: ExtendedPCConfiguration) => {
+    const upgradedParts: Partial<Record<PartCategory, Part | null>> = { ...baseConfig.parts };
+    
+    // planの各フェーズのアップグレードを適用
+    plan.phases.forEach(phase => {
+      phase.partsToReplace?.forEach(partUpgrade => {
+        upgradedParts[partUpgrade.category] = partUpgrade.recommendedPart;
+      });
+    });
+    
+    // undefinedをnullに変換してPCConfiguration型に適合させる
+    const cleanedParts = Object.fromEntries(
+      Object.entries(upgradedParts).map(([key, value]) => [
+        key as PartCategory,
+        value ?? null
+      ])
+    ) as Record<PartCategory, Part | null>;
+    
+    const totalPrice = (baseConfig.totalPrice || 0) + plan.totalCost;
+    
+    return {
+      id: `${baseConfig.id}_upgraded`,
+      name: `${baseConfig.name} (アップグレード後)`,
+      parts: cleanedParts,  // ✅ undefined除去でPCConfiguration型適合
+      totalPrice,
+      totalPowerConsumption: baseConfig.totalPowerConsumption,
+      budget: baseConfig.budget,
+      createdAt: baseConfig.createdAt || new Date(),  // ✅ undefined除去
+      updatedAt: new Date(),
+      description: `${baseConfig.description || ''} - ${plan.name}アップグレード`,
+      tags: [...(baseConfig.tags || []), 'upgraded']
+    };
+  };
+  
   // 自動シミュレーション実行
   useEffect(() => {
     if (autoRun && plan && currentConfig && !simulatorState.currentSimulation) {
-      simulatorActions.runSimulation(plan, currentConfig);
+      simulatorActions.runSimulation(plan, convertToCurrentConfig(currentConfig));
     }
   }, [plan, currentConfig, autoRun, simulatorState.currentSimulation, simulatorActions]);
 
@@ -93,7 +201,7 @@ export const UpgradeSimulator: React.FC<UpgradeSimulatorProps> = ({
             <div className="flex items-center space-x-3">
               {/* シミュレーション制御 */}
               <button
-                onClick={() => simulatorActions.runSimulation(plan, currentConfig)}
+                onClick={() => simulatorActions.runSimulation(plan, convertToCurrentConfig(currentConfig))}
                 disabled={simulatorState.isSimulating}
                 className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
                   simulatorState.isSimulating
@@ -220,16 +328,16 @@ export const UpgradeSimulator: React.FC<UpgradeSimulatorProps> = ({
                 simulation={simulatorState.currentSimulation}
                 comparison={simulatorState.comparisonResult}
                 isLoading={simulatorState.isSimulating}
-                onRunSimulation={() => simulatorActions.runSimulation(plan, currentConfig)}
+                onRunSimulation={() => simulatorActions.runSimulation(plan, convertToCurrentConfig(currentConfig))}
               />
             )}
 
             {activeTab === 'benchmark' && (
               <BenchmarkTab
                 results={simulatorState.benchmarkResults}
-                comparison={simulatorState.benchmarkComparison}
+                comparison={simulatorState.benchmarkComparison as ComparisonResult | null}
                 isLoading={simulatorState.loading}
-                onRunBenchmark={(categories) => simulatorActions.runBenchmarkSimulation(categories)}
+                onRunBenchmark={(categories) => simulatorActions.runBenchmarkSimulation(categories as PerformanceCategory[])}
               />
             )}
 
@@ -240,8 +348,8 @@ export const UpgradeSimulator: React.FC<UpgradeSimulatorProps> = ({
                 currentConfig={currentConfig}
                 isLoading={simulatorState.loading}
                 onAnalyze={() => simulatorActions.analyzePowerEfficiency(
-                  currentConfig as any, 
-                  { id: plan.id, name: plan.name, parts: {}, totalPrice: plan.totalCost, createdAt: new Date(), updatedAt: new Date() }
+                  createPCConfiguration(currentConfig),  // beforeConfig
+                  createAfterConfig(plan, currentConfig) // afterConfig
                 )}
               />
             )}
@@ -253,18 +361,18 @@ export const UpgradeSimulator: React.FC<UpgradeSimulatorProps> = ({
                 currentConfig={currentConfig}
                 isLoading={simulatorState.loading}
                 onAnalyze={() => simulatorActions.analyzeThermalProfile(
-                  currentConfig as any,
-                  { id: plan.id, name: plan.name, parts: {}, totalPrice: plan.totalCost, createdAt: new Date(), updatedAt: new Date() }
+                  createPCConfiguration(currentConfig),  // beforeConfig
+                  createAfterConfig(plan, currentConfig) // afterConfig
                 )}
               />
             )}
 
             {activeTab === 'roi' && (
               <ROITab
-                roiAnalysis={simulatorState.roiAnalysis}
-                costBenefitAnalysis={simulatorState.costBenefitAnalysis}
+                roiAnalysis={simulatorState.roiAnalysis as Record<string, unknown> | null}
+                costBenefitAnalysis={simulatorState.costBenefitAnalysis as Record<string, unknown> | null}
                 plan={plan}
-                scenarios={simulatorState.activeScenarios}
+                scenarios={simulatorState.activeScenarios as unknown as Record<string, unknown>[]}
                 onCalculateROI={(timeframe) => simulatorActions.calculateROI(plan, timeframe)}
                 onAnalyzeCostBenefit={() => simulatorActions.performCostBenefitAnalysis(plan, simulatorState.activeScenarios)}
               />
@@ -374,7 +482,7 @@ const SimulatorTabButton: React.FC<SimulatorTabButtonProps> = ({
 
 interface OverviewTabProps {
   plan: UpgradeRecommendation;
-  currentConfig: CurrentPCConfiguration;
+  currentConfig: ExtendedPCConfiguration;
   simulation: SimulationResult | null;
   comparison: ComparisonResult | null;
   isLoading: boolean;
@@ -383,9 +491,9 @@ interface OverviewTabProps {
 
 const OverviewTab: React.FC<OverviewTabProps> = ({
   plan,
-  currentConfig,
+  // currentConfig,
   simulation,
-  comparison,
+  // comparison,
   isLoading,
   onRunSimulation
 }) => {
@@ -571,14 +679,13 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 
 interface BenchmarkTabProps {
   results: BenchmarkResult[];
-  comparison: any;
+  comparison: ComparisonResult | null;
   isLoading: boolean;
   onRunBenchmark: (categories: string[]) => void;
 }
 
 const BenchmarkTab: React.FC<BenchmarkTabProps> = ({
   results,
-  comparison,
   isLoading,
   onRunBenchmark
 }) => {
@@ -733,15 +840,15 @@ const BenchmarkTab: React.FC<BenchmarkTabProps> = ({
 interface PowerTabProps {
   analysis: PowerAnalysis | null;
   plan: UpgradeRecommendation;
-  currentConfig: CurrentPCConfiguration;
+  currentConfig: ExtendedPCConfiguration;
   isLoading: boolean;
   onAnalyze: () => void;
 }
 
 const PowerTab: React.FC<PowerTabProps> = ({
   analysis,
-  plan,
-  currentConfig,
+  // plan,
+  // currentConfig,
   isLoading,
   onAnalyze
 }) => {
@@ -939,15 +1046,15 @@ const PowerTab: React.FC<PowerTabProps> = ({
 interface ThermalTabProps {
   analysis: ThermalResult | null;
   plan: UpgradeRecommendation;
-  currentConfig: CurrentPCConfiguration;
+  currentConfig: ExtendedPCConfiguration;
   isLoading: boolean;
   onAnalyze: () => void;
 }
 
 const ThermalTab: React.FC<ThermalTabProps> = ({
   analysis,
-  plan,
-  currentConfig,
+  // plan,
+  // currentConfig,
   isLoading,
   onAnalyze
 }) => {
@@ -1154,10 +1261,10 @@ const ThermalTab: React.FC<ThermalTabProps> = ({
 // ===========================================
 
 interface ROITabProps {
-  roiAnalysis: any | null;
-  costBenefitAnalysis: any | null;
+  roiAnalysis: Record<string, unknown> | null;
+  costBenefitAnalysis: Record<string, unknown> | null;
   plan: UpgradeRecommendation;
-  scenarios: any[];
+  scenarios: Record<string, unknown>[];
   onCalculateROI: (timeframe: number) => void;
   onAnalyzeCostBenefit: () => void;
 }
@@ -1165,8 +1272,6 @@ interface ROITabProps {
 const ROITab: React.FC<ROITabProps> = ({
   roiAnalysis,
   costBenefitAnalysis,
-  plan,
-  scenarios,
   onCalculateROI,
   onAnalyzeCostBenefit
 }) => {
@@ -1175,12 +1280,12 @@ const ROITab: React.FC<ROITabProps> = ({
   const roiData = useMemo(() => {
     if (!roiAnalysis) return [];
     
-    const months = Array.from({ length: roiAnalysis.timeframe }, (_, i) => i + 1);
+    const months = Array.from({ length: roiAnalysis.timeframe as number }, (_, i) => i + 1);
     return months.map(month => ({
       month,
-      cumulative: roiAnalysis.monthlyBenefit * month - roiAnalysis.investmentCost,
-      monthlyBenefit: roiAnalysis.monthlyBenefit,
-      breakeven: month >= roiAnalysis.paybackPeriod
+      cumulative: (roiAnalysis.monthlyBenefit as number) * month - (roiAnalysis.investmentCost as number),
+      monthlyBenefit: roiAnalysis.monthlyBenefit as number,
+      breakeven: month >= (roiAnalysis.paybackPeriod as number)
     }));
   }, [roiAnalysis]);
 
@@ -1227,27 +1332,27 @@ const ROITab: React.FC<ROITabProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-white rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-green-600">
-                {roiAnalysis.roi.toFixed(1)}%
+                {(roiAnalysis.roi as number).toFixed(1)}%
               </div>
               <div className="text-sm text-gray-600">ROI</div>
             </div>
             <div className="bg-white rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {roiAnalysis.paybackPeriod.toFixed(1)}ヶ月
+                {(roiAnalysis.paybackPeriod as number).toFixed(1)}ヶ月
               </div>
               <div className="text-sm text-gray-600">回収期間</div>
             </div>
             <div className="bg-white rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-purple-600">
-                ¥{roiAnalysis.monthlyBenefit.toLocaleString()}
+                ¥{(roiAnalysis.monthlyBenefit as number).toLocaleString()}
               </div>
               <div className="text-sm text-gray-600">月間便益</div>
             </div>
             <div className="bg-white rounded-lg p-4 text-center">
               <div className={`text-2xl font-bold ${
-                roiAnalysis.netPresentValue > 0 ? 'text-green-600' : 'text-red-600'
+                (roiAnalysis.netPresentValue as number) > 0 ? 'text-green-600' : 'text-red-600'
               }`}>
-                ¥{roiAnalysis.netPresentValue.toLocaleString()}
+                ¥{(roiAnalysis.netPresentValue as number).toLocaleString()}
               </div>
               <div className="text-sm text-gray-600">NPV</div>
             </div>
@@ -1298,15 +1403,15 @@ const ROITab: React.FC<ROITabProps> = ({
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">生産性向上:</span>
-                  <span className="font-medium">¥{roiAnalysis.performanceValue.productivityGain.toLocaleString()}/月</span>
+                  <span className="font-medium">¥{((roiAnalysis.performanceValue as Record<string, unknown>).productivityGain as number).toLocaleString()}/月</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">時間節約:</span>
-                  <span className="font-medium">{roiAnalysis.performanceValue.timesSaved.toFixed(1)}時間/月</span>
+                  <span className="font-medium">{((roiAnalysis.performanceValue as Record<string, unknown>).timesSaved as number).toFixed(1)}時間/月</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">ストレス軽減:</span>
-                  <span className="font-medium">¥{roiAnalysis.performanceValue.frustrationReduction.toLocaleString()}/月</span>
+                  <span className="font-medium">¥{((roiAnalysis.performanceValue as Record<string, unknown>).frustrationReduction as number).toLocaleString()}/月</span>
                 </div>
               </div>
             </div>
@@ -1316,15 +1421,15 @@ const ROITab: React.FC<ROITabProps> = ({
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">電力削減:</span>
-                  <span className="font-medium">¥{roiAnalysis.costSavings.powerSavings.toLocaleString()}/月</span>
+                  <span className="font-medium">¥{((roiAnalysis.costSavings as Record<string, unknown>).powerSavings as number).toLocaleString()}/月</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">メンテナンス削減:</span>
-                  <span className="font-medium">¥{roiAnalysis.costSavings.maintenanceReduction.toLocaleString()}/月</span>
+                  <span className="font-medium">¥{((roiAnalysis.costSavings as Record<string, unknown>).maintenanceReduction as number).toLocaleString()}/月</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">ダウンタイム削減:</span>
-                  <span className="font-medium">¥{roiAnalysis.costSavings.downtimeReduction.toLocaleString()}/月</span>
+                  <span className="font-medium">¥{((roiAnalysis.costSavings as Record<string, unknown>).downtimeReduction as number).toLocaleString()}/月</span>
                 </div>
               </div>
             </div>
@@ -1343,19 +1448,19 @@ const ROITab: React.FC<ROITabProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-green-50 rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {costBenefitAnalysis.recommendationScore.toFixed(0)}
+                  {(costBenefitAnalysis.recommendationScore as number).toFixed(0)}
                 </div>
                 <div className="text-sm text-gray-600">推奨スコア</div>
               </div>
               <div className="bg-blue-50 rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  ¥{costBenefitAnalysis.totalBenefit.toLocaleString()}
+                  ¥{(costBenefitAnalysis.totalBenefit as number).toLocaleString()}
                 </div>
                 <div className="text-sm text-gray-600">総合便益</div>
               </div>
               <div className="bg-purple-50 rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-purple-600">
-                  {costBenefitAnalysis.costEffectiveness.toFixed(2)}
+                  {(costBenefitAnalysis.costEffectiveness as number).toFixed(2)}
                 </div>
                 <div className="text-sm text-gray-600">費用対効果</div>
               </div>
@@ -1364,7 +1469,7 @@ const ROITab: React.FC<ROITabProps> = ({
             <div>
               <h4 className="font-medium text-gray-700 mb-3">推奨事項</h4>
               <div className="space-y-2">
-                {costBenefitAnalysis.recommendations.map((rec, index) => (
+                {(costBenefitAnalysis.recommendations as string[]).map((rec: string, index: number) => (
                   <div key={index} className="flex items-start space-x-2">
                     <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
                     <span className="text-sm text-gray-700">{rec}</span>

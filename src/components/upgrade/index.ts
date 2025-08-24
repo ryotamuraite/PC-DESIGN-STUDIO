@@ -3,7 +3,7 @@
 
 export { PCDiagnostic } from './PCDiagnostic';
 export { UpgradePlanner } from './UpgradePlanner';
-export { UpgradeSimulator } from './UpgradeSimulator';
+export { UpgradeSimulator } from '../UpgradeSimulator/UpgradeSimulator';
 
 // 型エクスポート
 export type {

@@ -327,7 +327,7 @@ export const IntegratedPartSelector: React.FC<IntegratedPartSelectorProps> = ({
     setViewMode('category');
     
     alert(`パーツ「${partToAdd.name}」を追加しました！`);
-  }, [newPart]);
+  }, [newPart, onPartSelect]);
 
   // 🚀 検索リセット（高度検索統合）
   const handleResetSearch = useCallback(() => {

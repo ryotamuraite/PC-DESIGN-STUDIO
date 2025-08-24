@@ -1,7 +1,7 @@
 // src/services/upgradeAnalyzer.ts
 // Phase 3: 既存PCアップグレード診断エンジン - 市場初の差別化機能
 
-import { Part, PartCategory, ExtendedPCConfiguration } from '../types/index';
+import { Part, PartCategory } from '../types/index';
 import {
   CurrentPCConfiguration,
   BottleneckAnalysis,
@@ -152,10 +152,10 @@ export class UpgradeAnalyzer {
     const performanceScore = this.calculatePerformanceScore(part, category);
     
     // コスパスコア計算
-    const valueScore = this.calculateValueScore(part, category, performanceScore);
+    const valueScore = this.calculateValueScore(part, performanceScore);
     
     // 現代性スコア計算
-    const modernityScore = this.calculateModernityScore(part, category);
+    const modernityScore = this.calculateModernityScore(part);
     
     // 強み・弱み分析
     const { strengths, weaknesses } = this.analyzeStrengthsWeaknesses(part, category, currentPC);
@@ -224,7 +224,7 @@ export class UpgradeAnalyzer {
     if (coolingBottleneck) bottlenecks.push(coolingBottleneck);
     
     // 互換性ボトルネック検出
-    const compatibilityBottleneck = this.detectCompatibilityBottleneck(currentPC, componentAnalysis);
+    const compatibilityBottleneck = this.detectCompatibilityBottleneck(currentPC);
     if (compatibilityBottleneck) bottlenecks.push(compatibilityBottleneck);
     
     // 重要度順にソート
@@ -482,8 +482,7 @@ export class UpgradeAnalyzer {
    * 🔗 互換性ボトルネック検出
    */
   private detectCompatibilityBottleneck(
-    currentPC: CurrentPCConfiguration,
-    componentAnalysis: Record<PartCategory, ComponentPerformance>
+    currentPC: CurrentPCConfiguration
   ): BottleneckResult | null {
     // マザーボードの世代チェック
     const motherboard = currentPC.currentParts.motherboard;
@@ -536,7 +535,7 @@ export class UpgradeAnalyzer {
    * 🎮 ゲーミング性能予測
    */
   private async predictGamingPerformance(
-    currentPC: CurrentPCConfiguration,
+    _currentPC: CurrentPCConfiguration,
     componentAnalysis: Record<PartCategory, ComponentPerformance>
   ): Promise<PerformanceMetrics> {
     const cpu = componentAnalysis.cpu;
@@ -588,7 +587,7 @@ export class UpgradeAnalyzer {
    * 💼 生産性性能予測
    */
   private async predictProductivityPerformance(
-    currentPC: CurrentPCConfiguration,
+    _currentPC: CurrentPCConfiguration,
     componentAnalysis: Record<PartCategory, ComponentPerformance>
   ): Promise<PerformanceMetrics> {
     const cpu = componentAnalysis.cpu;
@@ -630,7 +629,7 @@ export class UpgradeAnalyzer {
    * 🏠 一般用途性能予測
    */
   private async predictGeneralPerformance(
-    currentPC: CurrentPCConfiguration,
+    _currentPC: CurrentPCConfiguration,
     componentAnalysis: Record<PartCategory, ComponentPerformance>
   ): Promise<PerformanceMetrics> {
     // 一般用途は全パーツのバランス重視
@@ -889,7 +888,8 @@ export class UpgradeAnalyzer {
     return this.performanceDatabase.get(key) || 50; // デフォルト50
   }
 
-  private calculateValueScore(part: Part, category: PartCategory, performanceScore: number): number {
+  private calculateValueScore(part: Part, performanceScore: number): number {
+    // Simplified function signature - category parameter removed
     if (!part.price || part.price <= 0) return 50;
     
     // コスパ = 性能 / (価格/1万円)
@@ -898,7 +898,7 @@ export class UpgradeAnalyzer {
     return Math.min(100, Math.max(0, valueScore));
   }
 
-  private calculateModernityScore(part: Part, category: PartCategory): number {
+  private calculateModernityScore(part: Part): number {
     if (!part.releaseDate) return 60; // リリース日不明の場合
     
     const releaseDate = typeof part.releaseDate === 'string' ? new Date(part.releaseDate) : part.releaseDate;
@@ -908,13 +908,15 @@ export class UpgradeAnalyzer {
     return Math.round(Math.max(20, 100 - ageYears * 15));
   }
 
-  private analyzeStrengthsWeaknesses(part: Part, category: PartCategory, currentPC: CurrentPCConfiguration): {strengths: string[]; weaknesses: string[]} {
+  private analyzeStrengthsWeaknesses(part: Part, category: PartCategory, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _currentPC: CurrentPCConfiguration): {strengths: string[]; weaknesses: string[]} {
     const strengths: string[] = [];
     const weaknesses: string[] = [];
     
     const performanceScore = this.calculatePerformanceScore(part, category);
-    const valueScore = this.calculateValueScore(part, category, performanceScore);
-    const modernityScore = this.calculateModernityScore(part, category);
+    const valueScore = this.calculateValueScore(part, performanceScore);
+    const modernityScore = this.calculateModernityScore(part);
     
     // 強み判定
     if (performanceScore > 80) strengths.push('高性能');
@@ -933,7 +935,8 @@ export class UpgradeAnalyzer {
     performanceScore: number,
     valueScore: number,
     modernityScore: number,
-    _currentPC: CurrentPCConfiguration // eslint-disable-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _currentPC: CurrentPCConfiguration
   ): 'keep' | 'upgrade_soon' | 'upgrade_later' | 'replace_immediately' {
     
     const overallScore = (performanceScore + valueScore + modernityScore) / 3;
@@ -945,7 +948,7 @@ export class UpgradeAnalyzer {
   }
 
   private predictLifespan(part: Part, category: PartCategory, usage: string): number {
-    const modernityScore = this.calculateModernityScore(part, category);
+    const modernityScore = this.calculateModernityScore(part);
     const performanceScore = this.calculatePerformanceScore(part, category);
     
     let baseLifespan = 60; // 5年
@@ -963,7 +966,9 @@ export class UpgradeAnalyzer {
     return Math.round(Math.max(12, Math.min(120, baseLifespan))); // 1年〜10年
   }
 
-  private assessMaintenanceNeeded(_part: Part, currentPC: CurrentPCConfiguration): boolean { // eslint-disable-line @typescript-eslint/no-unused-vars
+  private assessMaintenanceNeeded(
+     
+    _part: Part, currentPC: CurrentPCConfiguration): boolean {
     if (!currentPC.pcInfo.purchaseDate) return false;
     
     const ageYears = (Date.now() - currentPC.pcInfo.purchaseDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
@@ -978,7 +983,7 @@ export class UpgradeAnalyzer {
     
     // 同メーカーボーナス
     const otherParts = Object.values(currentPC.currentParts).flat().filter(p => p && p.id !== part.id);
-    const sameManufacturerCount = otherParts.filter(p => p.manufacturer === part.manufacturer).length;
+    const sameManufacturerCount = otherParts.filter(p => p && p.manufacturer === part.manufacturer).length;
     compatibilityScore += sameManufacturerCount * 5;
     
     return Math.min(100, compatibilityScore);
@@ -995,15 +1000,19 @@ export class UpgradeAnalyzer {
     return this.analyzeComponent(storage[0], 'storage', currentPC);
   }
 
-  private suggestCPUUpgrade(_currentPC: CurrentPCConfiguration): string { // eslint-disable-line @typescript-eslint/no-unused-vars
+  private suggestCPUUpgrade(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _currentPC: CurrentPCConfiguration): string {
     return '上位CPU'; // 実装簡略化
   }
 
-  private needsMotherboardUpgrade(_currentPC: CurrentPCConfiguration): boolean { // eslint-disable-line @typescript-eslint/no-unused-vars
+  private needsMotherboardUpgrade(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _currentPC: CurrentPCConfiguration): boolean {
     return false; // 実装簡略化
   }
 
-  private estimateUpgradeCost(currentPart: Part | null, category: PartCategory): number {
+  private estimateUpgradeCost(_currentPart: Part | null, category: PartCategory): number {
     // カテゴリ別概算費用
     const baseCosts: Record<string, number> = {
       cpu: 50000,
@@ -1019,11 +1028,15 @@ export class UpgradeAnalyzer {
     return baseCosts[category] || 20000;
   }
 
-  private suggestGPUUpgrade(_currentPC: CurrentPCConfiguration): string { // eslint-disable-line @typescript-eslint/no-unused-vars
+  private suggestGPUUpgrade(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _currentPC: CurrentPCConfiguration): string {
     return '上位GPU'; // 実装簡略化
   }
 
-  private needsPSUUpgrade(_currentPC: CurrentPCConfiguration): boolean { // eslint-disable-line @typescript-eslint/no-unused-vars
+  private needsPSUUpgrade(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _currentPC: CurrentPCConfiguration): boolean {
     return false; // 実装簡略化
   }
 
@@ -1086,7 +1099,9 @@ export class UpgradeAnalyzer {
     return 4; // デフォルト
   }
 
-  private estimateCompatibilityFixCost(_currentPC: CurrentPCConfiguration): number { // eslint-disable-line @typescript-eslint/no-unused-vars
+  private estimateCompatibilityFixCost(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _currentPC: CurrentPCConfiguration): number {
     return 50000; // マザーボード交換概算費用
   }
 

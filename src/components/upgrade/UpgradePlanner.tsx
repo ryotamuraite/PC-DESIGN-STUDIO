@@ -31,11 +31,11 @@ export const UpgradePlanner: React.FC<UpgradePlannerProps> = ({
     recommendations.length > 0 ? recommendations[0] : null
   );
   const [isGeneratingCustom, setIsGeneratingCustom] = useState(false);
-  const [customPlanConfig, setCustomPlanConfig] = useState({
+  const [customPlanConfig, setCustomPlanConfig] = useState<CustomPlanConfig>({
     budget: 100000,
-    timeframe: '3-6months' as const,
-    priority: 'performance' as const,
-    complexity: 'moderate' as const
+    timeframe: '3-6months',
+    priority: 'performance',
+    complexity: 'moderate'
   });
 
   // プラン統計の計算
@@ -153,7 +153,7 @@ export const UpgradePlanner: React.FC<UpgradePlannerProps> = ({
               <CustomPlanCreator
                 analysis={analysis}
                 config={customPlanConfig}
-                onConfigChange={setCustomPlanConfig}
+                onConfigChange={(config) => setCustomPlanConfig(config)}
                 isGenerating={isGeneratingCustom}
                 onGenerate={() => setIsGeneratingCustom(true)}
                 onPlanGenerated={onPlanGenerated}
@@ -398,8 +398,7 @@ interface PlanComparisonProps {
 
 const PlanComparison: React.FC<PlanComparisonProps> = ({
   analysis,
-  recommendations,
-  onSelectPlan
+  recommendations
 }) => {
   const [selectedPlans, setSelectedPlans] = useState<string[]>([]);
 
@@ -496,15 +495,17 @@ const PlanComparison: React.FC<PlanComparisonProps> = ({
 // 🎛️ カスタムプラン作成タブ
 // ===========================================
 
+interface CustomPlanConfig {
+  budget: number;
+  timeframe: 'immediate' | '1-3months' | '3-6months' | '6-12months' | 'flexible';
+  priority: 'performance' | 'budget' | 'efficiency' | 'longevity';
+  complexity: 'simple' | 'moderate' | 'advanced';
+}
+
 interface CustomPlanCreatorProps {
   analysis: BottleneckAnalysis;
-  config: {
-    budget: number;
-    timeframe: string;
-    priority: string;
-    complexity: string;
-  };
-  onConfigChange: (config: any) => void;
+  config: CustomPlanConfig;
+  onConfigChange: (config: CustomPlanConfig) => void;
   isGenerating: boolean;
   onGenerate: () => void;
   onPlanGenerated?: (plan: UpgradeRecommendation) => void;
@@ -515,8 +516,7 @@ const CustomPlanCreator: React.FC<CustomPlanCreatorProps> = ({
   config,
   onConfigChange,
   isGenerating,
-  onGenerate,
-  onPlanGenerated
+  onGenerate
 }) => {
   return (
     <div className="space-y-6">
@@ -553,7 +553,7 @@ const CustomPlanCreator: React.FC<CustomPlanCreatorProps> = ({
             </label>
             <select
               value={config.timeframe}
-              onChange={(e) => onConfigChange({ ...config, timeframe: e.target.value })}
+              onChange={(e) => onConfigChange({ ...config, timeframe: e.target.value as typeof config.timeframe })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
             >
               <option value="immediate">🚀 すぐに</option>
@@ -570,7 +570,7 @@ const CustomPlanCreator: React.FC<CustomPlanCreatorProps> = ({
             </label>
             <select
               value={config.priority}
-              onChange={(e) => onConfigChange({ ...config, priority: e.target.value })}
+              onChange={(e) => onConfigChange({ ...config, priority: e.target.value as typeof config.priority })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
             >
               <option value="performance">🚀 性能重視</option>
@@ -586,7 +586,7 @@ const CustomPlanCreator: React.FC<CustomPlanCreatorProps> = ({
             </label>
             <select
               value={config.complexity}
-              onChange={(e) => onConfigChange({ ...config, complexity: e.target.value })}
+              onChange={(e) => onConfigChange({ ...config, complexity: e.target.value as typeof config.complexity })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
             >
               <option value="simple">🟢 簡単</option>
@@ -896,7 +896,7 @@ const ComparisonTable: React.FC<{
             <tr key={metric.name} className="border-b">
               <td className="py-2 font-medium">{metric.name}</td>
               {data.plans.map((plan) => {
-                const value = getNestedValue(plan, metric.key);
+                const value = getNestedValue(plan as unknown as Record<string, unknown>, metric.key);
                 return (
                   <td key={plan.id} className="text-center py-2 px-4">
                     {metric.format(value)}
@@ -944,17 +944,23 @@ const BaselineComparison: React.FC<{
 
 const CustomPlanPreview: React.FC<{
   analysis: BottleneckAnalysis;
-  config: any;
+  config: {
+    budget: number;
+    timeframe: string;
+    priority: string;
+    complexity: string;
+  };
 }> = ({ analysis, config }) => {
   const predictedPlan = useMemo(() => {
     // 簡易的な予測ロジック
     const budgetFactor = config.budget / 100000; // 10万円基準
-    const priorityMultiplier = {
+    const priorityMultipliers: Record<string, number> = {
       performance: 1.2,
       budget: 0.8,
       efficiency: 1.0,
       longevity: 1.1
-    }[config.priority] || 1.0;
+    };
+    const priorityMultiplier = priorityMultipliers[config.priority as string] || 1.0;
 
     const estimatedImprovement = Math.min(
       analysis.bottlenecks.length * 15 * budgetFactor * priorityMultiplier,
@@ -999,8 +1005,14 @@ const CustomPlanPreview: React.FC<{
 // 🛠️ ユーティリティ関数
 // ===========================================
 
-function getNestedValue(obj: any, path: string): number {
-  return path.split('.').reduce((current, key) => current?.[key], obj) || 0;
+function getNestedValue(
+  obj: Record<string, unknown>, 
+  path: string
+): number {
+  const result = path.split('.').reduce((current: Record<string, unknown> | unknown, key: string) => {
+    return current && typeof current === 'object' ? (current as Record<string, unknown>)[key] : undefined;
+  }, obj);
+  return typeof result === 'number' ? result : 0;
 }
 
 export default UpgradePlanner;

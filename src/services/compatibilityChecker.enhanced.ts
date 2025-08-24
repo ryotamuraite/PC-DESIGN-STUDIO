@@ -258,8 +258,9 @@ export class EnhancedCompatibilityCheckerService {
   private checkMemoryCompatibilityEnhanced(config: PCConfiguration): MemoryCompatibility {
     const memory = config.parts.memory;
     const motherboard = config.parts.motherboard;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _cpu = config.parts.cpu; // 将来の拡張用（現在未使用）
+    // 将来の拡張用（現在未使用）
+    // const _cpu = config.parts.cpu; // 将来的にCPUメモリ対応情報チェックで使用予定
+    void config.parts.cpu; // 将来の機能拡張用に保持
 
     if (!memory || !motherboard) {
       return {
@@ -286,8 +287,8 @@ export class EnhancedCompatibilityCheckerService {
     const capacityCompatible = !memoryCapacity || memoryCapacity <= maxCapacity;
     
     // メモリスピード互換性チェック
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _speedCompatible = true; // 今後の拡張用
+    // 今後の拡張用
+    // const _speedCompatible = true; // 将来的にメモリ速度チェック機能で使用予定
     let speedWarning = '';
     if (memorySpeed && memoryInfo) {
       const isJedecStandard = memoryInfo.standardSpeeds.includes(memorySpeed);
@@ -863,7 +864,8 @@ export class EnhancedCompatibilityCheckerService {
   private isConnectorCompatibleEnhanced(required: string, available: string): boolean {
     if (required === available) return true;
     
-    const compatibilityMap = {
+    // 🎯 型安全なコネクタ互換性マップ
+    const compatibilityMap: Record<string, readonly string[]> = {
       '8pin_cpu': ['8pin_cpu', '4+4pin'],
       '4pin': ['4pin', '4+4pin'],  
       '8pin_pcie': ['8pin_pcie', '6+2pin'],
@@ -891,7 +893,10 @@ export class EnhancedCompatibilityCheckerService {
 
   private getHigherTier(currentTier: string): string {
     const tiers = ['entry', 'mainstream', 'high-end', 'flagship'] as const;
-    const currentIndex = tiers.indexOf(currentTier);
+    // ✅ 型安全性確保 - currentTierが有効な値かチェック
+    const validTiers = ['entry', 'mainstream', 'high-end', 'flagship'] as const;
+    const safeTier = validTiers.includes(currentTier as typeof validTiers[number]) ? currentTier as typeof validTiers[number] : 'entry';
+    const currentIndex = tiers.indexOf(safeTier);
     return currentIndex < tiers.length - 1 ? tiers[currentIndex + 1] : currentTier;
   }
 
@@ -914,7 +919,7 @@ export class EnhancedCompatibilityCheckerService {
   }
 
   private predictFrameRates(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     _cpuTier: string, 
     gpuTier: string
   ): Record<string, number> {

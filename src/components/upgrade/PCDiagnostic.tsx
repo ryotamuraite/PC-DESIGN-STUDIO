@@ -201,13 +201,31 @@ const PCConfigurationInput: React.FC<PCConfigurationInputProps> = ({
 
   const updatePCInfo = (updates: Partial<CurrentPCConfiguration['pcInfo']>) => {
     updateConfig({
-      pcInfo: { ...config.pcInfo, ...updates }
+      pcInfo: { 
+        // デフォルト値で必須フィールドを保証
+        condition: 'good',
+        usage: 'gaming',
+        dailyUsageHours: 8,
+        location: 'home',
+        ...config.pcInfo, 
+        ...updates 
+      }
     });
   };
 
   const updateConstraints = (updates: Partial<CurrentPCConfiguration['constraints']>) => {
     updateConfig({
-      constraints: { ...config.constraints, ...updates }
+      constraints: { 
+        // デフォルト値で必須フィールドを保証
+        budget: 100000,
+        timeframe: '3-6months',
+        priority: 'performance',
+        keepParts: [],
+        replaceParts: [],
+        maxComplexity: 'moderate',
+        ...config.constraints, 
+        ...updates 
+      }
     });
   };
 
@@ -249,7 +267,7 @@ const PCConfigurationInput: React.FC<PCConfigurationInputProps> = ({
             </label>
             <select
               value={config.pcInfo?.usage || 'gaming'}
-              onChange={(e) => updatePCInfo({ usage: e.target.value as any })}
+              onChange={(e) => updatePCInfo({ usage: e.target.value as CurrentPCConfiguration['pcInfo']['usage'] })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="gaming">🎮 ゲーミング</option>
@@ -267,7 +285,7 @@ const PCConfigurationInput: React.FC<PCConfigurationInputProps> = ({
             </label>
             <select
               value={config.pcInfo?.condition || 'good'}
-              onChange={(e) => updatePCInfo({ condition: e.target.value as any })}
+              onChange={(e) => updatePCInfo({ condition: e.target.value as CurrentPCConfiguration['pcInfo']['condition'] })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="excellent">✨ 優秀（ほぼ新品）</option>
@@ -354,7 +372,7 @@ const PCConfigurationInput: React.FC<PCConfigurationInputProps> = ({
             </label>
             <select
               value={config.constraints?.timeframe || '3-6months'}
-              onChange={(e) => updateConstraints({ timeframe: e.target.value as any })}
+              onChange={(e) => updateConstraints({ timeframe: e.target.value as CurrentPCConfiguration['constraints']['timeframe'] })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="immediate">🚀 すぐに</option>
@@ -371,7 +389,7 @@ const PCConfigurationInput: React.FC<PCConfigurationInputProps> = ({
             </label>
             <select
               value={config.constraints?.priority || 'performance'}
-              onChange={(e) => updateConstraints({ priority: e.target.value as any })}
+              onChange={(e) => updateConstraints({ priority: e.target.value as CurrentPCConfiguration['constraints']['priority'] })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="performance">🚀 性能重視</option>
@@ -388,7 +406,7 @@ const PCConfigurationInput: React.FC<PCConfigurationInputProps> = ({
             </label>
             <select
               value={config.constraints?.maxComplexity || 'moderate'}
-              onChange={(e) => updateConstraints({ maxComplexity: e.target.value as any })}
+              onChange={(e) => updateConstraints({ maxComplexity: e.target.value as CurrentPCConfiguration['constraints']['maxComplexity'] })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="simple">🟢 簡単（パーツ交換のみ）</option>

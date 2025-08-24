@@ -1,7 +1,7 @@
 // src/services/storage/localStorageService.ts
 // ExtendedPCConfiguration用LocalStorage管理サービス
 
-import { ExtendedPCConfiguration } from '@/types/extended';
+import { PCConfiguration } from '@/types';
 
 const STORAGE_KEYS = {
   EXTENDED_CONFIGURATION: 'pc-design-studio:extended-configuration',
@@ -19,7 +19,7 @@ export interface StorageConfig {
 export interface ConfigurationHistory {
   id: string;
   timestamp: number;
-  configuration: ExtendedPCConfiguration;
+  configuration: PCConfiguration;
   label?: string;
 }
 
@@ -30,7 +30,7 @@ export interface ConfigurationHistory {
 export class LocalStorageService {
   private static instance: LocalStorageService;
   private autoSaveTimer: NodeJS.Timeout | null = null;
-  private currentConfig: ExtendedPCConfiguration | null = null;
+  private currentConfig: PCConfiguration | null = null;
 
   private constructor() {}
 
@@ -44,7 +44,7 @@ export class LocalStorageService {
   /**
    * 現在の構成を保存
    */
-  saveConfiguration(configuration: ExtendedPCConfiguration): boolean {
+  saveConfiguration(configuration: PCConfiguration): boolean {
     try {
       const serialized = JSON.stringify({
         ...configuration,
@@ -68,7 +68,7 @@ export class LocalStorageService {
   /**
    * 保存済み構成を読み込み
    */
-  loadConfiguration(): ExtendedPCConfiguration | null {
+  loadConfiguration(): PCConfiguration | null {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.EXTENDED_CONFIGURATION);
       if (!saved) {
@@ -92,7 +92,7 @@ export class LocalStorageService {
   /**
    * 構成履歴に追加
    */
-  private addToHistory(configuration: ExtendedPCConfiguration, label?: string): void {
+  private addToHistory(configuration: PCConfiguration, label?: string): void {
     try {
       const history = this.getConfigurationHistory();
       const newEntry: ConfigurationHistory = {
@@ -128,12 +128,12 @@ export class LocalStorageService {
 
       const parsed = JSON.parse(history);
       // 日付オブジェクトを復元
-      return parsed.map((entry: any) => ({
+      return parsed.map((entry: Record<string, unknown>) => ({
         ...entry,
         configuration: {
-          ...entry.configuration,
-          createdAt: new Date(entry.configuration.createdAt),
-          updatedAt: new Date(entry.configuration.updatedAt)
+          ...(entry.configuration as PCConfiguration),
+          createdAt: new Date((entry.configuration as PCConfiguration).createdAt || new Date()),
+          updatedAt: new Date((entry.configuration as PCConfiguration).updatedAt || new Date())
         }
       }));
     } catch (error) {
@@ -145,7 +145,7 @@ export class LocalStorageService {
   /**
    * 履歴から構成を復元
    */
-  loadFromHistory(historyId: string): ExtendedPCConfiguration | null {
+  loadFromHistory(historyId: string): PCConfiguration | null {
     try {
       const history = this.getConfigurationHistory();
       const entry = history.find(h => h.id === historyId);
@@ -180,8 +180,8 @@ export class LocalStorageService {
    * 自動保存開始
    */
   startAutoSave(
-    configuration: ExtendedPCConfiguration,
-    onSave?: (config: ExtendedPCConfiguration) => void
+    configuration: PCConfiguration,
+    onSave?: (config: PCConfiguration) => void
   ): void {
     const config = this.getStorageConfig();
     if (!config.autoSaveEnabled) {
@@ -214,7 +214,7 @@ export class LocalStorageService {
   /**
    * 構成が変更されたかチェック
    */
-  private hasConfigurationChanged(newConfig: ExtendedPCConfiguration): boolean {
+  private hasConfigurationChanged(newConfig: PCConfiguration): boolean {
     if (!this.currentConfig) {
       return true;
     }
@@ -282,7 +282,7 @@ export class LocalStorageService {
   /**
    * 構成をエクスポート（JSON）
    */
-  exportConfiguration(configuration: ExtendedPCConfiguration): string {
+  exportConfiguration(configuration: PCConfiguration): string {
     return JSON.stringify({
       version: '1.0',
       exportedAt: new Date().toISOString(),
@@ -293,7 +293,7 @@ export class LocalStorageService {
   /**
    * 構成をインポート（JSON）
    */
-  importConfiguration(jsonData: string): ExtendedPCConfiguration | null {
+  importConfiguration(jsonData: string): PCConfiguration | null {
     try {
       const parsed = JSON.parse(jsonData);
       
@@ -366,15 +366,15 @@ export const localStorageService = LocalStorageService.getInstance();
 // 便利な関数をエクスポート
 export const useLocalStorage = () => {
   return {
-    save: (config: ExtendedPCConfiguration) => localStorageService.saveConfiguration(config),
+    save: (config: PCConfiguration) => localStorageService.saveConfiguration(config),
     load: () => localStorageService.loadConfiguration(),
     getHistory: () => localStorageService.getConfigurationHistory(),
     loadFromHistory: (id: string) => localStorageService.loadFromHistory(id),
     clearHistory: () => localStorageService.clearHistory(),
-    startAutoSave: (config: ExtendedPCConfiguration, onSave?: (config: ExtendedPCConfiguration) => void) => 
+    startAutoSave: (config: PCConfiguration, onSave?: (config: PCConfiguration) => void) => 
       localStorageService.startAutoSave(config, onSave),
     stopAutoSave: () => localStorageService.stopAutoSave(),
-    export: (config: ExtendedPCConfiguration) => localStorageService.exportConfiguration(config),
+    export: (config: PCConfiguration) => localStorageService.exportConfiguration(config),
     import: (jsonData: string) => localStorageService.importConfiguration(jsonData),
     getStats: () => localStorageService.getStorageStats(),
     clearAll: () => localStorageService.clearAllStorage(),

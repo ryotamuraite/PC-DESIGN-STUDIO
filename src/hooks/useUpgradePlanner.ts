@@ -364,7 +364,7 @@ export const useUpgradePlanner = (): [UpgradePlannerState, UpgradePlannerActions
     console.log(`[UpgradePlanner] ${operation}: ${duration}ms`);
   }, []);
 
-  const generateCacheKey = useCallback((analysis: BottleneckAnalysis, config?: any): string => {
+  const generateCacheKey = useCallback((analysis: BottleneckAnalysis, config?: Record<string, unknown>): string => {
     const keyData = {
       score: analysis.overallScore,
       bottlenecks: analysis.bottlenecks.length,
@@ -626,30 +626,55 @@ export const useUpgradePlanner = (): [UpgradePlannerState, UpgradePlannerActions
   }, [state.plannerStats]);
 
   // プレースホルダー実装（簡略化）
-  const updateExecutionProgress = useCallback((_executionId: string, _progress: Partial<ExecutionProgress>) => {
+  const updateExecutionProgress = useCallback((
+    _executionId: string, 
+    _progress: Partial<ExecutionProgress>
+  ) => {
+    void _executionId;
+    void _progress;
     // 実装省略
   }, []);
 
-  const completeExecution = useCallback((executionId: string, result: ExecutionResult) => {
+  const completeExecution = useCallback((
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _executionId: string, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _result: ExecutionResult
+  ) => {
     // 実装省略
   }, []);
 
-  const runSimulation = useCallback(async (config: UpgradeSimulationConfig): Promise<UpgradeSimulationResult> => {
+  const runSimulation = useCallback(async (
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _config: UpgradeSimulationConfig
+  ): Promise<UpgradeSimulationResult> => {
     // 実装省略 - シミュレーション機能は Phase 3 Week3 で実装予定
     throw new Error('シミュレーション機能は Week3 で実装予定です');
   }, []);
 
-  const optimizePlan = useCallback(async (plan: UpgradeRecommendation, constraints: OptimizationConstraints): Promise<UpgradeRecommendation> => {
+  const optimizePlan = useCallback(async (
+    plan: UpgradeRecommendation, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _constraints: OptimizationConstraints
+  ): Promise<UpgradeRecommendation> => {
     // 実装省略
     return plan;
   }, []);
 
-  const exportPlan = useCallback((plan: UpgradeRecommendation, format: 'json' | 'csv' | 'pdf'): string => {
+  const exportPlan = useCallback((
+    plan: UpgradeRecommendation, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _format: 'json' | 'csv' | 'pdf'
+  ): string => {
     // 実装省略
     return JSON.stringify(plan);
   }, []);
 
-  const importPlan = useCallback((data: string, format: 'json' | 'csv'): UpgradeRecommendation => {
+  const importPlan = useCallback((
+    data: string, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _format: 'json' | 'csv'
+  ): UpgradeRecommendation => {
     // 実装省略
     return JSON.parse(data);
   }, []);
@@ -695,18 +720,18 @@ async function generatePlansFromAnalysis(analysis: BottleneckAnalysis): Promise<
   const bottlenecks = analysis.bottlenecks;
   
   // 1. 緊急対応プラン
-  if (bottlenecks.some(b => b.severity === 'critical')) {
-    plans.push(createUrgentPlan(bottlenecks));
+  if (bottlenecks.some(b => (b as unknown as Record<string, unknown>).severity === 'critical')) {
+    plans.push(createUrgentPlan(bottlenecks as unknown as Record<string, unknown>[]));
   }
   
   // 2. バランス重視プラン
-  plans.push(createBalancedPlan(bottlenecks));
+  plans.push(createBalancedPlan(bottlenecks as unknown as Record<string, unknown>[]));
   
   // 3. 予算重視プラン
-  plans.push(createBudgetPlan(bottlenecks));
+  plans.push(createBudgetPlan(bottlenecks as unknown as Record<string, unknown>[]));
   
   // 4. 性能重視プラン
-  plans.push(createPerformancePlan(bottlenecks));
+  plans.push(createPerformancePlan(bottlenecks as unknown as Record<string, unknown>[]));
   
   return plans.filter(Boolean);
 }
@@ -770,7 +795,7 @@ async function createCustomPlan(analysis: BottleneckAnalysis, config: CustomPlan
     type: 'balanced',
     totalCost: config.budget.preferred,
     timeframe: `${config.timeframe.preferredDuration}ヶ月`,
-    difficultyLevel: config.constraints.maxComplexity,
+    difficultyLevel: config.constraints.maxComplexity === 'simple' ? 'easy' : config.constraints.maxComplexity as 'moderate' | 'easy' | 'difficult' | 'expert',
     phases: [], // 実装簡略化
     expectedImprovement: {
       performanceGain: calculateCustomImprovement(analysis, config),
@@ -794,14 +819,17 @@ async function createCustomPlan(analysis: BottleneckAnalysis, config: CustomPlan
 }
 
 // プラン生成ヘルパー関数群（簡略化実装）
-function createUrgentPlan(bottlenecks: any[]): UpgradeRecommendation {
+function createUrgentPlan(
+   
+  bottlenecks: Record<string, unknown>[]
+): UpgradeRecommendation {
   const critical = bottlenecks.filter(b => b.severity === 'critical');
   return {
     id: `urgent_${Date.now()}`,
     name: '🚨 緊急対応プラン',
     description: '重大問題の即座解決',
     type: 'immediate',
-    totalCost: critical.reduce((sum, b) => sum + b.costEstimate, 0),
+    totalCost: critical.reduce((sum, b) => sum + ((b as Record<string, unknown>).costEstimate as number || 0), 0),
     timeframe: '即座実行',
     difficultyLevel: 'moderate',
     phases: [],
@@ -814,7 +842,10 @@ function createUrgentPlan(bottlenecks: any[]): UpgradeRecommendation {
   };
 }
 
-function createBalancedPlan(bottlenecks: any[]): UpgradeRecommendation {
+function createBalancedPlan(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _bottlenecks: Record<string, unknown>[]
+): UpgradeRecommendation {
   return {
     id: `balanced_${Date.now()}`,
     name: '⚖️ バランスプラン',
@@ -833,7 +864,10 @@ function createBalancedPlan(bottlenecks: any[]): UpgradeRecommendation {
   };
 }
 
-function createBudgetPlan(bottlenecks: any[]): UpgradeRecommendation {
+function createBudgetPlan(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _bottlenecks: Record<string, unknown>[]
+): UpgradeRecommendation {
   return {
     id: `budget_${Date.now()}`,
     name: '💰 予算重視プラン',
@@ -852,7 +886,10 @@ function createBudgetPlan(bottlenecks: any[]): UpgradeRecommendation {
   };
 }
 
-function createPerformancePlan(bottlenecks: any[]): UpgradeRecommendation {
+function createPerformancePlan(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _bottlenecks: Record<string, unknown>[]
+): UpgradeRecommendation {
   return {
     id: `performance_${Date.now()}`,
     name: '🚀 性能重視プラン',
@@ -860,7 +897,7 @@ function createPerformancePlan(bottlenecks: any[]): UpgradeRecommendation {
     type: 'performance',
     totalCost: 250000,
     timeframe: '6-12ヶ月',
-    difficultyLevel: 'advanced',
+    difficultyLevel: 'difficult',
     phases: [],
     expectedImprovement: { performanceGain: 45, valueGain: 40, longevityExtension: 24, powerEfficiencyGain: 20 },
     roi: { costPerformanceRatio: 1.0, paybackPeriod: 12, totalSavings: 60000, valueRetention: 0.9 },
@@ -872,7 +909,11 @@ function createPerformancePlan(bottlenecks: any[]): UpgradeRecommendation {
 }
 
 // ユーティリティ関数群
-function calculateOverallScore(plan: UpgradeRecommendation, metrics: ComparisonMetric[]): number {
+function calculateOverallScore(
+  plan: UpgradeRecommendation, 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _metrics: ComparisonMetric[]
+): number {
   return plan.priority; // 簡略化
 }
 
@@ -895,7 +936,10 @@ function generateReasoningForPlan(plan: UpgradeRecommendation): string[] {
   return [`${plan.name}は${plan.description}を重視`, `予想改善効果: ${plan.expectedImprovement.performanceGain}%`];
 }
 
-function analyzeTradeoffs(plans: UpgradeRecommendation[]): TradeoffAnalysis[] {
+function analyzeTradeoffs(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _plans: UpgradeRecommendation[]
+): TradeoffAnalysis[] {
   return [{
     aspect1: 'コスト',
     aspect2: '性能',

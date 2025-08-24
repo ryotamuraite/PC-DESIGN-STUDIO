@@ -90,6 +90,24 @@ export interface AdditionalComponents {
   expansion: Part[];               // 拡張カード
 }
 
+// 🔧 アップグレード機能用：現在のPC情報型定義
+export interface CurrentPCInfo {
+  condition: 'excellent' | 'good' | 'fair' | 'poor';
+  usage: 'gaming' | 'office' | 'creative' | 'development' | 'server' | 'mixed';
+  dailyUsageHours: number;
+  location: 'home' | 'office' | 'mobile';
+}
+
+// 🔧 アップグレード機能用：制約情報型定義
+export interface UpgradeConstraints {
+  budget: number;
+  timeframe: 'immediate' | '1-3months' | '3-6months' | '6-12months' | 'flexible';
+  priority: 'performance' | 'budget' | 'efficiency' | 'longevity';
+  keepParts: PartCategory[];
+  replaceParts: PartCategory[];
+  maxComplexity: 'simple' | 'moderate' | 'advanced';
+}
+
 // 新PCConfiguration型（複数搭載対応）
 export interface ExtendedPCConfiguration {
   id: string;
@@ -100,6 +118,15 @@ export interface ExtendedPCConfiguration {
   
   // 追加パーツ（複数可能）
   additionalComponents: AdditionalComponents;
+  
+  // 🔧 後方互換性: partsプロパティ追加（計算プロパティ）
+  parts: Partial<Record<PartCategory, Part | null>>;
+  
+  // 🔧 UpgradeSimulator対応: 現在のPC情報
+  pcInfo?: CurrentPCInfo;
+  
+  // 🔧 UpgradeSimulator対応: アップグレード制約
+  constraints?: UpgradeConstraints;
   
   // 物理制限情報（自動計算）
   physicalLimits: PhysicalLimits;
@@ -117,6 +144,8 @@ export interface ExtendedPCConfiguration {
   updatedAt?: Date;
   description?: string;
   tags?: string[];
+  version?: string;
+  lastUpdated?: Date;
   
   // 制限チェック結果
   limitChecks: {
@@ -224,11 +253,15 @@ export function convertToExtendedConfiguration(config: PCConfiguration): Extende
     }
   });
   
+  // 🔧 後方互換性: partsプロパティを生成
+  const parts: Partial<Record<PartCategory, Part | null>> = { ...config.parts };
+  
   return {
     id: config.id,
     name: config.name,
     coreComponents,
     additionalComponents,
+    parts, // 🔧 後方互換性のためのpartsプロパティ
     physicalLimits: {
       maxM2Slots: 2,
       maxSataConnectors: 6,
@@ -764,6 +797,34 @@ export interface StorageConfig {
     metrics: Array<{timestamp: string; responseTime: number; successRate: number}>;
     healthHistory: Array<{timestamp: string; status: string; details: Record<string, string | number | boolean>}>; // 🔧 any → 具体的な型に修正
   };
+}
+
+// ===========================================
+// 🚀 Phase 3: UpgradeSimulator専用型定義
+// ===========================================
+
+// パフォーマンス指標型定義（UpgradeSimulator用）
+export interface PerformanceMetrics {
+  cpu: number;           // CPU性能スコア (0-100)
+  gpu: number;           // GPU性能スコア (0-100)
+  memory: number;        // メモリ性能スコア (0-100)
+  storage: number;       // ストレージ性能スコア (0-100)
+  overall: number;       // 総合性能スコア (0-100)
+  
+  // 統計情報
+  simulationCount?: number;
+  averageExecutionTime?: number; // ms
+  cacheHitRate?: number;         // %
+  successRate?: number;          // %
+  averageConfidence?: number;    // 平均信頼度
+  
+  // 人気・トレンド情報
+  popularCategories?: string[];
+  commonScenarios?: string[];
+  
+  // システムリソース
+  memoryUsage?: number;          // MB
+  cpuUtilization?: number;       // %
 }
 
 // パフォーマンスベンチマーク（Phase 2拡張）

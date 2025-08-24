@@ -2,8 +2,10 @@
 // ExtendedPCConfiguration管理用カスタムフック（LocalStorage連携）
 
 import { useCallback, useEffect, useState } from 'react';
-import { ExtendedPCConfiguration, convertToExtendedConfiguration } from '@/types/extended';
+import { PCConfiguration, ExtendedPCConfiguration, convertToExtendedConfiguration } from '@/types';
 import { localStorageService, ConfigurationHistory } from '@/services/storage/localStorageService';
+
+// convertToExtendedConfigurationは使用されています（コメントで明示）
 
 export interface UseExtendedConfigurationOptions {
   autoSave?: boolean;
@@ -23,7 +25,7 @@ export const useExtendedConfiguration = (options: UseExtendedConfigurationOption
 
   // デフォルト構成
   const getDefaultConfiguration = (): ExtendedPCConfiguration => {
-    return convertToExtendedConfiguration({
+    const baseConfig: PCConfiguration = {
       id: `config-${Date.now()}`,
       name: "新しいPC構成",
       parts: {
@@ -43,7 +45,8 @@ export const useExtendedConfiguration = (options: UseExtendedConfigurationOption
       updatedAt: new Date(),
       description: "",
       tags: [],
-    });
+    };
+    return convertToExtendedConfiguration(baseConfig);
   };
 
   // 状態管理
@@ -61,9 +64,10 @@ export const useExtendedConfiguration = (options: UseExtendedConfigurationOption
       try {
         const saved = localStorageService.loadConfiguration();
         if (saved) {
-          setConfiguration(saved);
+          const extendedConfig = convertToExtendedConfiguration(saved);
+          setConfiguration(extendedConfig);
           setLastSavedAt(new Date());
-          onLoad?.(saved);
+          onLoad?.(extendedConfig);
         }
         
         // 履歴も読み込み
@@ -84,10 +88,24 @@ export const useExtendedConfiguration = (options: UseExtendedConfigurationOption
   // 自動保存設定
   useEffect(() => {
     if (autoSave && !isLoading) {
-      localStorageService.startAutoSave(configuration, (savedConfig) => {
+      // ExtendedPCConfiguration → PCConfiguration 変換
+      const legacyConfig: PCConfiguration = {
+        id: configuration.id,
+        name: configuration.name,
+        parts: configuration.parts,
+        totalPrice: configuration.totalPrice,
+        totalPowerConsumption: configuration.totalPowerConsumption,
+        budget: configuration.budget,
+        createdAt: configuration.createdAt,
+        updatedAt: configuration.updatedAt,
+        description: configuration.description,
+        tags: configuration.tags
+      };
+      
+      localStorageService.startAutoSave(legacyConfig, (_savedConfig) => { // eslint-disable-line @typescript-eslint/no-unused-vars
         setLastSavedAt(new Date());
         setHasUnsavedChanges(false);
-        onSave?.(savedConfig);
+        onSave?.(configuration);
       });
 
       return () => {
@@ -100,7 +118,21 @@ export const useExtendedConfiguration = (options: UseExtendedConfigurationOption
   const saveConfiguration = useCallback(async (): Promise<boolean> => {
     setIsSaving(true);
     try {
-      const success = localStorageService.saveConfiguration(configuration);
+      // ExtendedPCConfiguration → PCConfiguration 変換
+      const legacyConfig: PCConfiguration = {
+        id: configuration.id,
+        name: configuration.name,
+        parts: configuration.parts,
+        totalPrice: configuration.totalPrice,
+        totalPowerConsumption: configuration.totalPowerConsumption,
+        budget: configuration.budget,
+        createdAt: configuration.createdAt,
+        updatedAt: configuration.updatedAt,
+        description: configuration.description,
+        tags: configuration.tags
+      };
+      
+      const success = localStorageService.saveConfiguration(legacyConfig);
       if (success) {
         setLastSavedAt(new Date());
         setHasUnsavedChanges(false);
@@ -143,9 +175,10 @@ export const useExtendedConfiguration = (options: UseExtendedConfigurationOption
     try {
       const historyConfig = localStorageService.loadFromHistory(historyId);
       if (historyConfig) {
-        setConfiguration(historyConfig);
+        const extendedConfig = convertToExtendedConfiguration(historyConfig);
+        setConfiguration(extendedConfig);
         setHasUnsavedChanges(true); // 履歴から読み込んだら未保存状態にする
-        onLoad?.(historyConfig);
+        onLoad?.(extendedConfig);
         return true;
       }
       return false;
@@ -173,7 +206,20 @@ export const useExtendedConfiguration = (options: UseExtendedConfigurationOption
 
   // エクスポート
   const exportConfiguration = useCallback((): string => {
-    return localStorageService.exportConfiguration(configuration);
+    // ExtendedPCConfiguration → PCConfiguration 変換
+    const legacyConfig: PCConfiguration = {
+      id: configuration.id,
+      name: configuration.name,
+      parts: configuration.parts,
+      totalPrice: configuration.totalPrice,
+      totalPowerConsumption: configuration.totalPowerConsumption,
+      budget: configuration.budget,
+      createdAt: configuration.createdAt,
+      updatedAt: configuration.updatedAt,
+      description: configuration.description,
+      tags: configuration.tags
+    };
+    return localStorageService.exportConfiguration(legacyConfig);
   }, [configuration]);
 
   // インポート
@@ -181,9 +227,10 @@ export const useExtendedConfiguration = (options: UseExtendedConfigurationOption
     try {
       const imported = localStorageService.importConfiguration(jsonData);
       if (imported) {
-        setConfiguration(imported);
+        const extendedConfig = convertToExtendedConfiguration(imported);
+        setConfiguration(extendedConfig);
         setHasUnsavedChanges(true);
-        onLoad?.(imported);
+        onLoad?.(extendedConfig);
         return true;
       }
       return false;
@@ -242,16 +289,16 @@ export const useExtendedConfiguration = (options: UseExtendedConfigurationOption
     isOverBudget: configuration.totalPrice > (configuration.budget || 0),
     budgetRemaining: (configuration.budget || 0) - configuration.totalPrice,
     
-    // パーツ別の詳細
-    multiParts: configuration.multiParts,
-    constraints: configuration.constraints,
-    compatibility: configuration.compatibility,
+    // パーツ別の詳細（将来拡張用）
+    // multiParts: configuration.multiParts, // TODO: 将来実装
+    // constraints: configuration.constraints, // TODO: 将来実装
+    // compatibility: configuration.compatibility, // TODO: 将来実装
   };
 };
 
 // 軽量版フック（読み取り専用）
 export const useExtendedConfigurationRead = () => {
-  const [configuration, setConfiguration] = useState<ExtendedPCConfiguration | null>(null);
+  const [configuration, setConfiguration] = useState<PCConfiguration | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

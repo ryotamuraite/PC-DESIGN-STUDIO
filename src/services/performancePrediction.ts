@@ -17,11 +17,13 @@ interface CpuPerformanceData {
 
 interface GpuPerformanceData {
   benchmarkScores: {
-    '1080': number;
-    '1440': number;
-    '4': number; // 4K
+    '1080p': number;
+    '1440p': number;
+    '4K': number;
     productivity: number;
     rayTracing: number;
+    dlss?: number;
+    fsr?: number;
   };
   architecture: string;
   tier: string;
@@ -130,7 +132,8 @@ export class PerformancePredictionService {
     const gamingPerformance = this.predictGamingPerformance(cpuData, gpuData, bottleneckAnalysis);
 
     // 用途別スコア算出
-    const useCaseScores = this.calculateUseCaseScores(cpuData, gpuData, memory);
+    const memoryData = memory ? this.convertPartToMemoryData(memory) : undefined;
+    const useCaseScores = this.calculateUseCaseScores(cpuData, gpuData, memoryData);
 
     // 推奨事項生成
     const recommendations = this.generateRecommendations(cpuData, gpuData, bottleneckAnalysis, useCaseScores);
@@ -169,7 +172,7 @@ export class PerformancePredictionService {
   // ボトルネック分析実行（🔧 型安全性向上）
   private analyzeBottleneck(cpuData: CpuPerformanceData | null, gpuData: GpuPerformanceData | null): BottleneckAnalysis {
     const cpuScore = cpuData?.benchmarkScores?.gaming || 100;
-    const gpuScore = gpuData?.benchmarkScores?.['1440'] || 100; // 基準解像度
+    const gpuScore = gpuData?.benchmarkScores?.['1440p'] || 100; // 基準解像度
     const ratio = cpuScore / gpuScore;
 
     const thresholds = this.database.bottleneckAnalysis.thresholds;
@@ -225,9 +228,7 @@ export class PerformancePredictionService {
 
   // 解像度別影響分析（🔧 型安全性向上）
   private analyzeResolutionImpact(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _cpuData: CpuPerformanceData | null, 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _gpuData: GpuPerformanceData | null, 
     ratio: number
   ) {
@@ -247,6 +248,19 @@ export class PerformancePredictionService {
     return impact;
   }
 
+  // 🔧 解像度キー正規化関数（258・277行目修正対応）
+  private normalizeResolutionKey(resolution: string): keyof GpuPerformanceData['benchmarkScores'] {
+    const keyMap: Record<string, keyof GpuPerformanceData['benchmarkScores']> = {
+      '1080p': '1080p',
+      '1440p': '1440p', 
+      '4K': '4K',
+      '1080': '1080p',
+      '1440': '1440p',
+      '4': '4K'
+    };
+    return keyMap[resolution] || '1080p';
+  }
+
   // ゲーミング性能予測（🔧 型安全性向上）
   private predictGamingPerformance(cpuData: CpuPerformanceData, gpuData: GpuPerformanceData, bottleneck: BottleneckAnalysis): GamingPerformanceResult {
     const resolutions = ['1080p', '1440p', '4K'];
@@ -255,12 +269,13 @@ export class PerformancePredictionService {
     // 解像度別平均FPS
     const averageFps: Record<string, number> = {};
     resolutions.forEach(resolution => {
-      const gpuScore = gpuData.benchmarkScores[resolution.replace('p', '').replace('K', '')];
+      const resolutionKey = this.normalizeResolutionKey(resolution);
+      const gpuScore = gpuData.benchmarkScores[resolutionKey];
       const cpuScore = cpuData.benchmarkScores.gaming;
       
       // ボトルネック影響を加味したFPS計算
-      let fps = gpuScore;
-      if (bottleneck.bottleneckType === 'cpu') {
+      let fps = gpuScore || 0;
+      if (bottleneck.bottleneckType === 'cpu' && cpuScore !== undefined) {
         fps = Math.min(fps, cpuScore * 1.2);
       }
       
@@ -274,8 +289,9 @@ export class PerformancePredictionService {
       gameSpecificFps[game] = {};
       
       resolutions.forEach(resolution => {
-        const baselineScore = gpuData.benchmarkScores[resolution.replace('p', '').replace('K', '')];
-        const multiplier = gameProfile.performanceMultipliers[resolution];
+        const resolutionKey = this.normalizeResolutionKey(resolution);
+        const baselineScore = gpuData.benchmarkScores[resolutionKey] || 0;
+        const multiplier = gameProfile.performanceMultipliers[resolution] || 1;
         const predictedFps = Math.round(baselineScore * multiplier * 0.6);
         
         gameSpecificFps[game][resolution] = predictedFps;
@@ -381,9 +397,7 @@ export class PerformancePredictionService {
 
   // 推奨事項生成（🔧 型安全性向上）
   private generateRecommendations(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _cpuData: CpuPerformanceData, 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _gpuData: GpuPerformanceData, 
     bottleneck: BottleneckAnalysis, 
     scores: UseCaseScores
@@ -430,12 +444,11 @@ export class PerformancePredictionService {
 
   // 最適化提案生成（🔧 型安全性向上）
   private generateOptimizations(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _cpuData: CpuPerformanceData, 
     gpuData: GpuPerformanceData, 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _bottleneck: BottleneckAnalysis
   ): OptimizationSuggestion[] {
+    void _bottleneck; // 将来の機能拡張用に保持
     const optimizations: OptimizationSuggestion[] = [];
 
     // DLSS/FSR設定提案
@@ -530,6 +543,21 @@ export class PerformancePredictionService {
     }
     
     return name;
+  }
+
+  // 🔧 Part → MemoryData 変換関数実装（133行目修正対応）
+  private convertPartToMemoryData(part: { name?: string; specifications?: Record<string, unknown> }): MemoryData {
+    // パーツ名からメモリ容量とモジュール数を抽出
+    const name = part.name || '';
+    const capacity = parseInt(name.match(/(\d+)GB/)?.[1] || '16');
+    const modules = parseInt(name.match(/(\d+)x/)?.[1] || '1');
+    
+    return {
+      specifications: {
+        capacity,
+        modules
+      }
+    };
   }
 
   // 🔧 メモリ容量取得（型安全性向上）

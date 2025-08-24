@@ -8,9 +8,9 @@ import type {
   Part, 
   PartCategory, 
   PCConfiguration,
-  ExtendedPCConfiguration,
-  convertToLegacyConfiguration 
+  ExtendedPCConfiguration
 } from '@/types';
+import { convertToLegacyConfiguration } from '@/types';
 
 export interface PartSelectionDialogProps {
   isOpen: boolean;
@@ -38,7 +38,7 @@ export const PartSelectionDialog: React.FC<PartSelectionDialogProps> = ({
   const legacyConfig: PCConfiguration = convertToLegacyConfiguration(currentConfiguration);
 
   // パーツ選択処理
-  const handlePartSelection = useCallback((category: PartCategory, part: Part | null) => {
+  const handlePartSelection = useCallback((_category: PartCategory, part: Part | null) => {
     if (part) {
       onPartSelect(part);
       onClose();

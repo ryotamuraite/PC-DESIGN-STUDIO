@@ -488,8 +488,8 @@ export class CompatibilityCheckerService {
       return true;
     }
     
-    // 基本的な互換性パターン
-    const compatibilityMap = {
+    // 🎯 型安全な基本的互換性パターン
+    const compatibilityMap: Record<string, readonly string[]> = {
       '8pin': ['8pin', '6+2pin'],
       '6pin': ['6pin'],
       '8pin_cpu': ['8pin_cpu', '4+4pin'],

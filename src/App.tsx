@@ -24,9 +24,10 @@ import { useExtendedConfiguration } from "@/hooks/useExtendedConfiguration";
 import {
 PCConfiguration, 
 Part, 
-PartCategory 
+PartCategory
 } from "@/types";
-import { ExtendedPCConfiguration } from "@/types/extended";
+import type { CurrentPCConfiguration } from "@/types/upgrade";
+
 import React, { useState } from "react";
 // 🎨 ロゴファイルのimport - Viteベースパス対応
 import logoSvg from "/assets/logo.svg";
@@ -116,6 +117,42 @@ const MobileAdArea: React.FC = () => {
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>("builder");
   const { success, warning } = useNotifications();
+
+  // PCConfigurationをCurrentPCConfigurationに変換するヘルパー関数
+  const convertToCurrentPCConfiguration = (config: PCConfiguration): CurrentPCConfiguration => {
+    return {
+      id: config.id,
+      name: config.name,
+      currentParts: {
+        cpu: config.parts.cpu ?? null,
+        motherboard: config.parts.motherboard ?? null,
+        memory: config.parts.memory ? [config.parts.memory] : [],
+        gpu: config.parts.gpu ?? null,
+        storage: config.parts.storage ? [config.parts.storage] : [],
+        psu: config.parts.psu ?? null,
+        case: config.parts.case ?? null,
+        cooler: config.parts.cooler ?? null,
+        other: []
+      },
+      pcInfo: {
+        condition: 'good' as const,
+        usage: 'mixed' as const,
+        dailyUsageHours: 8,
+        location: 'home' as const
+      },
+      constraints: {
+        budget: config.budget || 150000,
+        timeframe: 'flexible' as const,
+        priority: 'performance' as const,
+        keepParts: [],
+        replaceParts: [],
+        maxComplexity: 'moderate' as const
+      },
+      createdAt: config.createdAt ?? new Date(),
+      lastUpdated: config.updatedAt ?? new Date(),
+      version: '1.0'
+    };
+  };
 
   // 🚧 Phase 3: アップグレード診断・プランナー・シミュレーター状態管理
   const [plannerState, plannerActions] = useUpgradePlanner();
@@ -272,7 +309,7 @@ const App: React.FC = () => {
     onLoad: (config) => {
       success(
         "保存済み構成を読み込みました",
-        `構成: ${config.name} | 最終更新: ${config.updatedAt.toLocaleDateString()}`,
+        `構成: ${config.name} | 最終更新: ${config.updatedAt?.toLocaleDateString() || '未設定'}`,
         "構成読み込み"
       );
     },
@@ -417,31 +454,31 @@ const App: React.FC = () => {
             {/* 📱 レスポンシブナビゲーション */}
             {/* デスクトップナビゲーション (1024px以上) */}
             {isDesktop && (
-              <nav className="flex space-x-8">
+              <nav className="flex space-x-4">
                 <button
                   onClick={() => handleTabSwitch("integrated")}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                  className={`h-12 min-w-[120px] px-4 py-2 text-sm font-medium rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 focus-visible ${
                     (activeTab as TabType) === "integrated"
                       ? "bg-cyan-100 text-cyan-700"
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  ダッシュボード
+                  構成作成
                 </button>
                 <button
                   onClick={() => handleTabSwitch("builder")}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                  className={`h-12 min-w-[120px] px-4 py-2 text-sm font-medium rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 focus-visible ${
                     (activeTab as TabType) === "builder"
                       ? "bg-blue-100 text-blue-700"
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  構成作成
+                  パーツ選択
                 </button>
                 {/* 🚧 Phase 2.5: 複数搭載対応タブ */}
                 <button
                   onClick={() => handleTabSwitch("multipart")}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                  className={`h-12 min-w-[120px] px-4 py-2 text-sm font-medium rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 focus-visible ${
                     (activeTab as TabType) === "multipart"
                       ? "bg-orange-100 text-orange-700"
                       : "text-gray-500 hover:text-gray-700"
@@ -452,7 +489,7 @@ const App: React.FC = () => {
                 {/* 🚧 Phase 3: アップグレード診断タブ */}
                 <button
                   onClick={() => handleTabSwitch("upgrade")}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                  className={`h-12 min-w-[120px] px-4 py-2 text-sm font-medium rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 focus-visible ${
                     (activeTab as TabType) === "upgrade"
                       ? "bg-purple-100 text-purple-700"
                       : "text-gray-500 hover:text-gray-700"
@@ -463,7 +500,7 @@ const App: React.FC = () => {
                 {/* 🚧 Phase 3: アップグレードプランナータブ */}
                 <button
                   onClick={() => handleTabSwitch("planner")}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                  className={`h-12 min-w-[120px] px-4 py-2 text-sm font-medium rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 focus-visible ${
                     (activeTab as TabType) === "planner"
                       ? "bg-green-100 text-green-700"
                       : "text-gray-500 hover:text-gray-700"
@@ -474,7 +511,7 @@ const App: React.FC = () => {
                 {/* 🎆 Phase 3 Week3: アップグレードシミュレータータブ */}
                 <button
                   onClick={() => handleTabSwitch("simulator")}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                  className={`h-12 min-w-[120px] px-4 py-2 text-sm font-medium rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 focus-visible ${
                     (activeTab as TabType) === "simulator"
                       ? "bg-purple-100 text-purple-700"
                       : "text-gray-500 hover:text-gray-700"
@@ -484,7 +521,7 @@ const App: React.FC = () => {
                 </button>
                 <button
                   onClick={() => handleTabSwitch("power")}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                  className={`h-12 min-w-[120px] px-4 py-2 text-sm font-medium rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 focus-visible ${
                     (activeTab as TabType) === "power"
                       ? "bg-blue-100 text-blue-700"
                       : "text-gray-500 hover:text-gray-700"
@@ -494,7 +531,7 @@ const App: React.FC = () => {
                 </button>
                 <button
                   onClick={() => handleTabSwitch("compatibility")}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                  className={`h-12 min-w-[120px] px-4 py-2 text-sm font-medium rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 focus-visible ${
                     (activeTab as TabType) === "compatibility"
                       ? "bg-blue-100 text-blue-700"
                       : "text-gray-500 hover:text-gray-700"
@@ -506,7 +543,7 @@ const App: React.FC = () => {
                 {shouldShowSearchTab && (
                   <button
                     onClick={() => handleTabSwitch("search")}
-                    className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus-visible ${
+                    className={`h-12 min-w-[120px] px-4 py-2 text-sm font-medium rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 focus-visible ${
                       (activeTab as TabType) === "search"
                         ? "bg-blue-100 text-blue-700"
                         : "text-gray-500 hover:text-gray-700"
@@ -562,7 +599,7 @@ const App: React.FC = () => {
                             : ""
                         }`}
                       >
-                        🎨 ダッシュボード
+                        🎨 構成作成
                       </button>
                       <button
                         onClick={() => handleTabSwitch("builder")}
@@ -572,7 +609,7 @@ const App: React.FC = () => {
                             : ""
                         }`}
                       >
-                        🔧 構成作成
+                        🔧 パーツ選択
                       </button>
                       {/* 🚧 Phase 2.5: モバイルメニューに複数搭載対応タブ追加 */}
                       <button
@@ -659,13 +696,14 @@ const App: React.FC = () => {
 
             {/* 構成状態インジケーター（統合版 + データ永続化状態） */}
             <div className="flex items-center space-x-4">
-              {/* パーツ数と価格 */}
-              <div className="text-sm text-gray-600">
-                パーツ数:{" "}
-                {Object.values(configuration.parts).filter(Boolean).length}/9
-              </div>
-              <div className="text-sm font-medium text-gray-900">
-                ¥{configuration.totalPrice.toLocaleString()}
+              {/* パーツ数と価格 - 垂直並びに変更 */}
+              <div className="flex flex-col items-end space-y-1">
+                <div className="text-sm text-gray-600">
+                  パーツ数: {Object.values(configuration.parts).filter(Boolean).length}/9
+                </div>
+                <div className="text-sm font-medium text-gray-900">
+                  ¥{configuration.totalPrice.toLocaleString()}
+                </div>
               </div>
               
               {/* 保存状態インジケーター */}
@@ -856,38 +894,17 @@ const App: React.FC = () => {
                       /* UpgradeSimulatorコンポーネント */
                       <UpgradeSimulator
                         plan={selectedPlan}
-                        currentConfig={{
+                        currentConfig={convertToCurrentPCConfiguration({
                           id: configuration.id,
                           name: configuration.name,
-                          currentParts: {
-                            cpu: configuration.parts.cpu,
-                            motherboard: configuration.parts.motherboard,
-                            memory: configuration.parts.memory ? [configuration.parts.memory] : [],
-                            gpu: configuration.parts.gpu,
-                            storage: configuration.parts.storage ? [configuration.parts.storage] : [],
-                            psu: configuration.parts.psu,
-                            case: configuration.parts.case,
-                            cooler: configuration.parts.cooler,
-                            other: []
-                          },
-                          pcInfo: {
-                            condition: 'good' as const,
-                            usage: 'gaming' as const,
-                            dailyUsageHours: 8,
-                            location: 'home' as const
-                          },
-                          constraints: {
-                            budget: configuration.budget || 150000,
-                            timeframe: 'flexible' as const,
-                            priority: 'performance' as const,
-                            keepParts: [],
-                            replaceParts: [],
-                            maxComplexity: 'moderate' as const
-                          },
+                          parts: configuration.parts,
+                          totalPrice: configuration.totalPrice,
+                          budget: configuration.budget,
                           createdAt: configuration.createdAt,
-                          lastUpdated: configuration.updatedAt,
-                          version: '1.0'
-                        }}
+                          updatedAt: configuration.updatedAt,
+                          description: configuration.description,
+                          tags: configuration.tags
+                        })}
                         onBack={handleBackToPlanner}
                         onSimulationComplete={handleSimulationComplete}
                       />
@@ -922,6 +939,17 @@ const App: React.FC = () => {
                       onConfigurationChange={(newConfig) => {
                         setExtendedConfiguration(() => ({
                           ...newConfig,
+                          parts: newConfig.parts || {
+                            cpu: null,
+                            gpu: null,
+                            motherboard: null,
+                            memory: null,
+                            storage: null,
+                            psu: null,
+                            case: null,
+                            cooler: null,
+                            monitor: null
+                          },
                           updatedAt: new Date()
                         }));
                       }}
@@ -1327,7 +1355,7 @@ const App: React.FC = () => {
                             onClick={() => handleTabSwitch("integrated")}
                             className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
                           >
-                            🎨 ダッシュボードへ
+                            🎨 構成作成へ
                           </button>
                         </div>
                       </div>
@@ -1535,7 +1563,7 @@ const App: React.FC = () => {
                 {deviceType.toUpperCase()} | 検索タブ: {shouldShowSearchTab ? '表示' : '統合済み'}
               </span>
               <span className="text-gray-400 hidden md:inline">
-                最終更新: {new Date().toLocaleTimeString()}
+                最終更新: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
               <span className="text-green-400">✅ Phase 2実行中</span>
               

@@ -297,7 +297,7 @@ export const MultiPartManager: React.FC<MultiPartManagerProps> = ({
     
     // ダイアログを閉じる
     setPartSelection(prev => ({ ...prev, isOpen: false }));
-  }, [partSelection, configuration, updateConfiguration]);
+  }, [partSelection, configuration, updateConfiguration, triggerPartAnimation]);
 
   // 🚀 必須パーツ管理
   const handleCorePartSelect = useCallback((category: keyof CoreComponents) => {
@@ -370,7 +370,7 @@ export const MultiPartManager: React.FC<MultiPartManagerProps> = ({
     
     // 追加パーツの価格
     Object.values(additionalComponents).forEach(partArray => {
-      partArray.forEach(part => total += part.price);
+      partArray.forEach((part: Part) => total += part.price);
     });
     
     return total;
@@ -603,7 +603,7 @@ export const MultiPartManager: React.FC<MultiPartManagerProps> = ({
                     <div className="border-t border-gray-200 p-4">
                       {parts.length > 0 ? (
                         <div className="space-y-3">
-                          {parts.map((part, index) => (
+                          {parts.map((part: Part, index: number) => (
                             <div
                             key={`${part.id}-${index}`}
                             className={`flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50 transition-all duration-300 transform ${

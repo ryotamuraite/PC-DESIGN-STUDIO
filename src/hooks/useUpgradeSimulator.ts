@@ -540,6 +540,7 @@ export const useUpgradeSimulator = (): [UpgradeSimulatorState, UpgradeSimulatorA
       });
       throw error;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runSimulation, runBenchmarkSimulation, state.activeScenarios, updateState, updateProgress, logPerformance]);
 
   // ===========================================
@@ -553,16 +554,16 @@ export const useUpgradeSimulator = (): [UpgradeSimulatorState, UpgradeSimulatorA
     // パフォーマンス比較分析実装
     const performance = {
       cpu: {
-        before: calculateCPUPerformance(beforeConfig.parts.cpu),
-        after: calculateCPUPerformance(afterConfig.parts.cpu)
+        before: calculateCPUPerformance(beforeConfig.parts.cpu as Record<string, unknown> | null),
+        after: calculateCPUPerformance(afterConfig.parts.cpu as Record<string, unknown> | null)
       },
       gpu: {
-        before: calculateGPUPerformance(beforeConfig.parts.gpu),
-        after: calculateGPUPerformance(afterConfig.parts.gpu)
+        before: calculateGPUPerformance(beforeConfig.parts.gpu as Record<string, unknown> | null),
+        after: calculateGPUPerformance(afterConfig.parts.gpu as Record<string, unknown> | null)
       },
       memory: {
-        before: calculateMemoryPerformance(beforeConfig.parts.memory),
-        after: calculateMemoryPerformance(afterConfig.parts.memory)
+        before: calculateMemoryPerformance(beforeConfig.parts.memory as Record<string, unknown> | null),
+        after: calculateMemoryPerformance(afterConfig.parts.memory as Record<string, unknown> | null)
       }
     };
     
@@ -653,6 +654,8 @@ export const useUpgradeSimulator = (): [UpgradeSimulatorState, UpgradeSimulatorA
     
     return result;
   }, [updateState]);
+
+
 
   // ===========================================
   // 💰 ROI・コストベネフィット分析
@@ -806,11 +809,15 @@ export const useUpgradeSimulator = (): [UpgradeSimulatorState, UpgradeSimulatorA
   }, [state]);
 
   // 簡略化された実装関数群
-  const addBenchmarkCategory = useCallback((category: PerformanceCategory) => {
+  const addBenchmarkCategory = useCallback(
+    (_category: PerformanceCategory) => {
+    void _category; // 未使用変数の明示的な無視
     // 実装省略
   }, []);
 
-  const removeBenchmarkCategory = useCallback((category: PerformanceCategory) => {
+  const removeBenchmarkCategory = useCallback(
+    (_category: PerformanceCategory) => {
+    void _category; // 未使用変数の明示的な無視
     // 実装省略
   }, []);
 
@@ -844,15 +851,21 @@ export const useUpgradeSimulator = (): [UpgradeSimulatorState, UpgradeSimulatorA
     }));
   }, [updateState]);
 
-  const saveSimulation = useCallback((name: string) => {
+  const saveSimulation = useCallback(
+    (_name: string) => {
+    void _name; // 未使用変数の明示的な無視
     // 実装省略
   }, []);
 
-  const loadSimulation = useCallback((id: string) => {
+  const loadSimulation = useCallback(
+    (_id: string) => {
+    void _id;
     // 実装省略
   }, []);
 
-  const exportResults = useCallback((format: 'json' | 'csv' | 'pdf'): string => {
+  const exportResults = useCallback(
+    (_format: 'json' | 'csv' | 'pdf'): string => {
+    void _format;
     // 実装省略
     return JSON.stringify(state.currentSimulation);
   }, [state.currentSimulation]);
@@ -897,7 +910,8 @@ export const useUpgradeSimulator = (): [UpgradeSimulatorState, UpgradeSimulatorA
 // ===========================================
 
 // パフォーマンス計算関数
-async function calculateBaselinePerformance(config: CurrentPCConfiguration) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function calculateBaselinePerformance(_config: CurrentPCConfiguration) {
   // モックデータ実装
   return {
     cpu: 75,
@@ -922,7 +936,10 @@ async function predictUpgradePerformance(plan: UpgradeRecommendation, config: Cu
   };
 }
 
-function calculateImprovement(baseline: any, upgraded: any) {
+function calculateImprovement(
+  baseline: Record<string, number>, 
+  upgraded: Record<string, number>
+) {
   return {
     overallImprovement: upgraded.overall - baseline.overall,
     categoryImprovements: {
@@ -934,7 +951,10 @@ function calculateImprovement(baseline: any, upgraded: any) {
   };
 }
 
-function calculateBasicROI(plan: UpgradeRecommendation, improvement: any) {
+function calculateBasicROI(
+  plan: UpgradeRecommendation, 
+  improvement: { overallImprovement: number; categoryImprovements: Record<string, number> }
+) {
   const monthlyBenefit = improvement.overallImprovement * 100; // 1%改善 = 100円/月
   const paybackPeriod = plan.totalCost / monthlyBenefit;
   const roi = (monthlyBenefit * 24 - plan.totalCost) / plan.totalCost * 100;
@@ -942,17 +962,25 @@ function calculateBasicROI(plan: UpgradeRecommendation, improvement: any) {
   return { monthlyBenefit, paybackPeriod, roi };
 }
 
-function identifyResolvedBottlenecks(plan: UpgradeRecommendation, config: CurrentPCConfiguration): string[] {
+function identifyResolvedBottlenecks(
+  plan: UpgradeRecommendation, 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _config: CurrentPCConfiguration
+): string[] {
   // 簡略化実装
   return plan.phases.map(phase => phase.name);
 }
 
-function calculateConfidence(plan: UpgradeRecommendation, config: CurrentPCConfiguration): number {
+function calculateConfidence(
+  plan: UpgradeRecommendation, 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _config: CurrentPCConfiguration
+): number {
   // 信頼度計算ロジック
   return plan.confidence * 100;
 }
 
-function predictUserSatisfaction(improvement: any): number {
+function predictUserSatisfaction(improvement: { overallImprovement: number }): number {
   // ユーザー満足度予測
   return Math.min(improvement.overallImprovement * 2, 100);
 }
@@ -971,40 +999,61 @@ async function simulateBenchmarkForCategory(category: PerformanceCategory): Prom
 }
 
 // パフォーマンス計算ヘルパー
-function calculateCPUPerformance(cpu: any): number {
-  if (!cpu) return 0;
+function calculateCPUPerformance(
+   
+  _cpu: Record<string, unknown> | null
+): number {
+  if (!_cpu) return 0;
   // CPU性能スコア計算ロジック（簡略化）
   return 70 + Math.random() * 20;
 }
 
-function calculateGPUPerformance(gpu: any): number {
-  if (!gpu) return 0;
+function calculateGPUPerformance(
+   
+  _gpu: Record<string, unknown> | null
+): number {
+  if (!_gpu) return 0;
   // GPU性能スコア計算ロジック（簡略化）
   return 60 + Math.random() * 30;
 }
 
-function calculateMemoryPerformance(memory: any): number {
-  if (!memory) return 0;
+function calculateMemoryPerformance(
+   
+  _memory: Record<string, unknown> | null
+): number {
+  if (!_memory) return 0;
   // メモリ性能スコア計算ロジック（簡略化）
   return 65 + Math.random() * 25;
 }
 
-function calculatePowerEfficiency(config: PCConfiguration): number {
+function calculatePowerEfficiency(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _config: PCConfiguration
+): number {
   // 電力効率計算（簡略化）
   return 75 + Math.random() * 15;
 }
 
-function calculateThermalEfficiency(config: PCConfiguration): number {
+function calculateThermalEfficiency(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _config: PCConfiguration
+): number {
   // 温度効率計算（簡略化）
   return 70 + Math.random() * 20;
 }
 
-function calculateNoiseLevel(config: PCConfiguration): number {
+function calculateNoiseLevel(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _config: PCConfiguration
+): number {
   // ノイズレベル計算（簡略化）
   return 30 + Math.random() * 10;
 }
 
-function identifyImprovementAreas(performance: any, efficiency: any): string[] {
+function identifyImprovementAreas(
+  performance: Record<string, { before: number; after: number }>, 
+  efficiency: Record<string, { before: number; after: number }>
+): string[] {
   const areas = [];
   if (performance.cpu.after > performance.cpu.before) areas.push('CPU性能向上');
   if (performance.gpu.after > performance.gpu.before) areas.push('GPU性能向上');
@@ -1012,12 +1061,20 @@ function identifyImprovementAreas(performance: any, efficiency: any): string[] {
   return areas;
 }
 
-function generateWarnings(beforeConfig: PCConfiguration, afterConfig: PCConfiguration): string[] {
+function generateWarnings(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _beforeConfig: PCConfiguration, 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _afterConfig: PCConfiguration
+): string[] {
   // 警告生成ロジック（簡略化）
   return [];
 }
 
-function calculateSystemPower(config: PCConfiguration) {
+function calculateSystemPower(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _config: PCConfiguration
+) {
   // システム電力計算（簡略化）
   return {
     idle: 100 + Math.random() * 50,
@@ -1026,12 +1083,15 @@ function calculateSystemPower(config: PCConfiguration) {
   };
 }
 
-function calculateAnnualPowerCost(power: any): number {
+function calculateAnnualPowerCost(power: { averageUsage: number }): number {
   // 年間電力コスト計算
   return power.averageUsage * 24 * 365 * 0.027 / 1000; // 27円/kWh
 }
 
-function calculateSystemThermal(config: PCConfiguration) {
+function calculateSystemThermal(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _config: PCConfiguration
+) {
   // システム温度計算（簡略化）
   return {
     cpu: 60 + Math.random() * 20,
@@ -1039,17 +1099,23 @@ function calculateSystemThermal(config: PCConfiguration) {
   };
 }
 
-function calculateCoolingEfficiency(config: PCConfiguration): number {
+function calculateCoolingEfficiency(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _config: PCConfiguration
+): number {
   // 冷却効率計算（簡略化）
   return 80 + Math.random() * 15;
 }
 
-function calculateSystemNoise(config: PCConfiguration): number {
+function calculateSystemNoise(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _config: PCConfiguration
+): number {
   // システムノイズ計算（簡略化）
   return 35 + Math.random() * 10;
 }
 
-function assessThermalThrottlingRisk(thermal: any): 'low' | 'medium' | 'high' {
+function assessThermalThrottlingRisk(thermal: { cpu: number; gpu: number }): 'low' | 'medium' | 'high' {
   // 温度スロットリングリスク評価
   const maxTemp = Math.max(thermal.cpu, thermal.gpu);
   if (maxTemp > 85) return 'high';

@@ -7,7 +7,6 @@ import {
   CurrentPCConfiguration,
   BottleneckAnalysis,
   UpgradeRecommendation,
-  UpgradeServiceState,
   UpgradeServiceConfig
 } from '../types/upgrade';
 
@@ -124,7 +123,7 @@ export const useUpgradeRecommendation = (
   // 🔧 ヘルパー関数
   // ===========================================
 
-  const log = useCallback((message: string, ...args: any[]) => {
+  const log = useCallback((message: string, ...args: unknown[]) => {
     if (enableDebugLogging) {
       console.log(`[useUpgradeRecommendation] ${message}`, ...args);
     }
@@ -156,6 +155,69 @@ export const useUpgradeRecommendation = (
   // ===========================================
   // 🔍 メイン診断機能
   // ===========================================
+
+  // ===========================================
+  // 📋 推奨生成機能（analyzePCより前に定義）
+  // ===========================================
+
+  const generateRecommendations = useCallback(async (analysis: BottleneckAnalysis): Promise<UpgradeRecommendation[]> => {
+    try {
+      log('推奨生成開始', analysis.overallScore);
+      
+      updateState({
+        isGeneratingRecommendations: true,
+        error: null
+      });
+
+      // キャッシュチェック
+      const cacheKey = `rec_${analysis.diagnosisDate.getTime()}_${analysis.overallScore}`;
+      const cached = recommendationCache.current.get(cacheKey);
+      
+      if (cached && isValidCache(cached.timestamp)) {
+        log('推奨キャッシュヒット', cacheKey);
+        
+        updateState({
+          isGeneratingRecommendations: false,
+          recommendations: cached.recommendations
+        });
+        
+        return cached.recommendations;
+      }
+
+      // 推奨生成ロジック（簡易実装）
+      const recommendations = await generateRecommendationsFromAnalysis(analysis);
+
+      // キャッシュ保存
+      if (enableCache) {
+        recommendationCache.current.set(cacheKey, {
+          recommendations,
+          timestamp: Date.now()
+        });
+      }
+
+      updateState({
+        isGeneratingRecommendations: false,
+        recommendations
+      });
+
+      log('推奨生成完了', recommendations.length);
+      
+      return recommendations;
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '推奨生成に失敗しました';
+      
+      log('推奨生成エラー', errorMessage);
+      
+      updateState({
+        isGeneratingRecommendations: false,
+        error: errorMessage
+      });
+      
+      throw error;
+    }
+
+  }, [enableCache, isValidCache, log, updateState]);
 
   const analyzePC = useCallback(async (config: CurrentPCConfiguration): Promise<BottleneckAnalysis> => {
     const startTime = Date.now();
@@ -266,73 +328,14 @@ export const useUpgradeRecommendation = (
     isValidCache,
     enableCache,
     autoGenerateRecommendations,
+    generateRecommendations,
     log,
     updateState,
     state.performance,
     state.analysisHistory
   ]);
 
-  // ===========================================
-  // 📋 推奨生成機能
-  // ===========================================
 
-  const generateRecommendations = useCallback(async (analysis: BottleneckAnalysis): Promise<UpgradeRecommendation[]> => {
-    try {
-      log('推奨生成開始', analysis.overallScore);
-      
-      updateState({
-        isGeneratingRecommendations: true,
-        error: null
-      });
-
-      // キャッシュチェック
-      const cacheKey = `rec_${analysis.diagnosisDate.getTime()}_${analysis.overallScore}`;
-      const cached = recommendationCache.current.get(cacheKey);
-      
-      if (cached && isValidCache(cached.timestamp)) {
-        log('推奨キャッシュヒット', cacheKey);
-        
-        updateState({
-          isGeneratingRecommendations: false,
-          recommendations: cached.recommendations
-        });
-        
-        return cached.recommendations;
-      }
-
-      // 推奨生成ロジック（簡易実装）
-      const recommendations = await generateRecommendationsFromAnalysis(analysis);
-
-      // キャッシュ保存
-      if (enableCache) {
-        recommendationCache.current.set(cacheKey, {
-          recommendations,
-          timestamp: Date.now()
-        });
-      }
-
-      updateState({
-        isGeneratingRecommendations: false,
-        recommendations
-      });
-
-      log('推奨生成完了', recommendations.length);
-      
-      return recommendations;
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '推奨生成に失敗しました';
-      
-      log('推奨生成エラー', errorMessage);
-      
-      updateState({
-        isGeneratingRecommendations: false,
-        error: errorMessage
-      });
-      
-      throw error;
-    }
-  }, [enableCache, isValidCache, log, updateState]);
 
   // ===========================================
   // 🗂️ ユーティリティ機能
