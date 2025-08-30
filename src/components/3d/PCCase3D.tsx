@@ -174,7 +174,7 @@ export const PCCase3D: React.FC<PCCase3DProps> = ({
           center
           distanceFactor={8}
         >
-          <div className="bg-black bg-opacity-80 text-white px-3 py-1.5 rounded-lg text-center shadow-lg border border-gray-600" style={{ minWidth: '100px', whiteSpace: 'nowrap' }}>
+          <div className="bg-white bg-opacity-95 text-gray-900 border border-gray-300 px-3 py-1.5 rounded-lg text-center shadow-lg" style={{ minWidth: '100px', whiteSpace: 'nowrap' }}>
             <div className="font-medium text-xs">
               {caseData?.name || 'PCケース'}
             </div>

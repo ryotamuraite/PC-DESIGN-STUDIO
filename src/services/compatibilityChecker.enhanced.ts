@@ -159,10 +159,11 @@ export class EnhancedCompatibilityCheckerService {
     const powerConnectors = this.checkPowerConnectorCompatibilityEnhanced(config);
     const physicalFit = this.checkPhysicalCompatibilityEnhanced(config);
     const performanceMatch = this.checkPerformanceBalanceEnhanced(config);
+    const cooling = this.checkCoolingCompatibilityEnhanced(config);
 
     // チェック結果から issues と warnings を収集
     this.collectIssuesAndWarnings(
-      { cpuSocket, memoryType, powerConnectors, physicalFit, performanceMatch },
+      { cpuSocket, memoryType, powerConnectors, physicalFit, performanceMatch, cooling },
       issues,
       warnings
     );
@@ -173,7 +174,8 @@ export class EnhancedCompatibilityCheckerService {
       memoryType,
       powerConnectors,
       physicalFit,
-      performanceMatch
+      performanceMatch,
+      cooling
     }, issues.length, warnings.length);
 
     const details: CompatibilityDetails = {
@@ -181,7 +183,8 @@ export class EnhancedCompatibilityCheckerService {
       memoryType,
       powerConnectors,
       physicalFit,
-      performanceMatch
+      performanceMatch,
+      cooling
     };
 
     // 🎯 改良版 isCompatible 判定
@@ -601,6 +604,139 @@ export class EnhancedCompatibilityCheckerService {
     };
   }
 
+  // 🎯 強化版冷却互換性チェック
+  private checkCoolingCompatibilityEnhanced(config: PCConfiguration) {
+    const cpu = config.parts.cpu;
+    const cooler = config.parts.cooler;
+    const pcCase = config.parts.case;
+
+    if (!cpu || !cooler) {
+      return {
+        compatible: true,
+        issues: [],
+        warnings: [],
+        message: 'CPUまたはCPUクーラーの選択を待っています'
+      };
+    }
+
+    const issues: string[] = [];
+    const warnings: string[] = [];
+    const detailedChecks: Array<{check: string, status: 'pass' | 'warning' | 'fail', details: string}> = [];
+
+    // 1. CPU TDP vs クーラー冷却能力
+    const cpuTdp = Number(this.getSpecValue(cpu.specifications, 'tdp')) || 0;
+    const coolerTdp = Number(this.getSpecValue(cooler.specifications, 'tdp') || this.getSpecValue(cooler.specifications, 'coolingCapacity')) || 0;
+    
+    if (cpuTdp > 0 && coolerTdp > 0) {
+      if (cpuTdp > coolerTdp) {
+        issues.push(`クーラーの冷却能力不足 (CPU TDP: ${cpuTdp}W, クーラー: ${coolerTdp}W)`);
+        detailedChecks.push({
+          check: 'TDP冷却能力',
+          status: 'fail',
+          details: `CPU TDP ${cpuTdp}W > クーラー ${coolerTdp}W`
+        });
+      } else if (cpuTdp > coolerTdp * 0.8) {
+        warnings.push(`クーラー冷却能力が上限に近いです (CPU: ${cpuTdp}W, クーラー: ${coolerTdp}W)`);
+        detailedChecks.push({
+          check: 'TDP冷却能力',
+          status: 'warning',
+          details: `CPU TDP ${cpuTdp}W (クーラー能力の80%以上: ${coolerTdp}W)`
+        });
+      } else {
+        detailedChecks.push({
+          check: 'TDP冷却能力',
+          status: 'pass',
+          details: `CPU TDP ${cpuTdp}W ≤ クーラー ${coolerTdp}W`
+        });
+      }
+    }
+
+    // 2. CPUソケット対応
+    const cpuSocket = this.getSpecValue(cpu.specifications, 'socket') as string | undefined;
+    const coolerSockets = this.getSpecArray(cooler.specifications, 'supportedSockets');
+    
+    if (cpuSocket && coolerSockets.length > 0) {
+      if (!coolerSockets.includes(cpuSocket)) {
+        issues.push(`クーラーが${cpuSocket}ソケットに対応していません`);
+        detailedChecks.push({
+          check: 'ソケット対応',
+          status: 'fail',
+          details: `${cpuSocket} 非対応 (対応: ${coolerSockets.join(', ')})`
+        });
+      } else {
+        detailedChecks.push({
+          check: 'ソケット対応',
+          status: 'pass',
+          details: `${cpuSocket} 対応`
+        });
+      }
+    }
+
+    // 3. クーラークリアランス（ケース高制限）
+    const coolerHeight = (this.getSpecValue(cooler.specifications, 'height') as number) || 0;
+    const maxCoolerHeight = pcCase ? (this.getSpecValue(pcCase.specifications, 'maxCoolerHeight') as number) || 1000 : 1000;
+    
+    if (coolerHeight > 0) {
+      if (coolerHeight > maxCoolerHeight) {
+        issues.push(`CPUクーラー高 ${coolerHeight}mm がケース上限 ${maxCoolerHeight}mm を超えています`);
+        detailedChecks.push({
+          check: 'クーラークリアランス',
+          status: 'fail',
+          details: `${coolerHeight}mm > ${maxCoolerHeight}mm (上限超過)`
+        });
+      } else if (coolerHeight > maxCoolerHeight * 0.95) {
+        warnings.push(`クーラー高がケース上限に近いです (${coolerHeight}mm / ${maxCoolerHeight}mm)`);
+        detailedChecks.push({
+          check: 'クーラークリアランス',
+          status: 'warning',
+          details: `${coolerHeight}mm (上限の95%以上: ${maxCoolerHeight}mm)`
+        });
+      } else {
+        detailedChecks.push({
+          check: 'クーラークリアランス',
+          status: 'pass',
+          details: `${coolerHeight}mm (上限: ${maxCoolerHeight}mm)`
+        });
+      }
+    }
+
+    // 4. 冷却タイプ情報
+    const coolerType = this.getSpecValue(cooler.specifications, 'type') as string;
+    if (coolerType) {
+      detailedChecks.push({
+        check: 'クーラータイプ',
+        status: 'pass',
+        details: `${coolerType}クーラー`
+      });
+    }
+
+    const compatible = issues.length === 0;
+
+    let message = '';
+    if (!compatible) {
+      message = `${issues.length}件の冷却問題があります`;
+    } else if (warnings.length > 0) {
+      message = `冷却性能に問題ありませんが、${warnings.length}件の注意点があります`;
+    } else {
+      message = '冷却性能に問題ありません';
+    }
+
+    return {
+      compatible,
+      issues,
+      warnings,
+      detailedChecks,
+      cpuTdp,
+      coolerTdp: coolerTdp || undefined,
+      coolerHeight,
+      maxCoolerHeight: pcCase ? maxCoolerHeight : undefined,
+      cpuSocket,
+      supportedSockets: coolerSockets.length > 0 ? coolerSockets : undefined,
+      coolerType,
+      message
+    };
+  }
+
   // 🎯 強化版パフォーマンスバランスチェック
   private checkPerformanceBalanceEnhanced(config: PCConfiguration): PerformanceCompatibility {
     const cpu = config.parts.cpu;
@@ -700,12 +836,12 @@ export class EnhancedCompatibilityCheckerService {
     warnings: CompatibilityWarning[]
   ): void {
     // CPUソケット関連
-    if (!details.cpuSocket.compatible && !details.cpuSocket.message.includes('待っています')) {
+    if (details.cpuSocket && !details.cpuSocket.compatible && !details.cpuSocket.message.includes('待っています')) {
       issues.push({
         id: 'cpu_socket_mismatch',
         type: 'socket_mismatch',
         severity: 'critical',
-        message: details.cpuSocket.message,
+        message: details.cpuSocket?.message || '',
         affectedParts: ['cpu', 'motherboard'],
         solution: 'CPUソケットが一致するマザーボードを選択してください',
         category: 'ソケット互換性'
@@ -713,7 +849,7 @@ export class EnhancedCompatibilityCheckerService {
     }
 
     // メモリ関連
-    if (!details.memoryType.compatible && !details.memoryType.message.includes('待っています')) {
+    if (details.memoryType && !details.memoryType.compatible && !details.memoryType.message.includes('待っています')) {
       issues.push({
         id: 'memory_type_mismatch',
         type: 'memory_incompatible',
@@ -725,7 +861,7 @@ export class EnhancedCompatibilityCheckerService {
       });
     }
 
-    if (details.memoryType.warnings && details.memoryType.warnings.length > 0) {
+    if (details.memoryType?.warnings && details.memoryType.warnings.length > 0) {
       details.memoryType.warnings.forEach((warning, index) => {
         warnings.push({
           id: `memory_warning_${index}`,
@@ -737,7 +873,7 @@ export class EnhancedCompatibilityCheckerService {
     }
 
     // 電源関連
-    if (!details.powerConnectors.compatible && !details.powerConnectors.message.includes('待っています')) {
+    if (details.powerConnectors && !details.powerConnectors.compatible && !details.powerConnectors.message.includes('待っています')) {
       issues.push({
         id: 'power_connector_missing',
         type: 'connector_missing',
@@ -749,7 +885,7 @@ export class EnhancedCompatibilityCheckerService {
       });
     }
 
-    if (details.powerConnectors.powerWarning) {
+    if (details.powerConnectors?.powerWarning) {
       warnings.push({
         id: 'power_capacity_warning',
         message: details.powerConnectors.powerWarning,
@@ -759,8 +895,8 @@ export class EnhancedCompatibilityCheckerService {
     }
 
     // 物理的互換性関連
-    if (!details.physicalFit.compatible && !details.physicalFit.message.includes('待っています')) {
-      details.physicalFit.issues.forEach((issue, index) => {
+    if (details.physicalFit && !details.physicalFit.compatible && !details.physicalFit.message.includes('待っています')) {
+      details.physicalFit.issues?.forEach((issue, index) => {
         issues.push({
           id: `physical_fit_${index}`,
           type: 'size_conflict',
@@ -772,7 +908,7 @@ export class EnhancedCompatibilityCheckerService {
         });
       });
 
-      details.physicalFit.warnings.forEach((warning, index) => {
+      details.physicalFit.warnings?.forEach((warning, index) => {
         warnings.push({
           id: `physical_warning_${index}`,
           message: warning,
@@ -783,9 +919,9 @@ export class EnhancedCompatibilityCheckerService {
     }
 
     // パフォーマンス関連
-    if (!details.performanceMatch.balanced && !details.performanceMatch.message.includes('待っています')) {
-      details.performanceMatch.bottlenecks.forEach((bottleneck, index) => {
-        const severity = details.performanceMatch.severity === 'severe' ? 'critical' : 'warning';
+    if (details.performanceMatch && !details.performanceMatch.balanced && !details.performanceMatch.message.includes('待っています')) {
+      details.performanceMatch.bottlenecks?.forEach((bottleneck, index) => {
+        const severity = details.performanceMatch?.severity === 'severe' ? 'critical' : 'warning';
         if (severity === 'critical') {
           issues.push({
             id: `performance_bottleneck_${index}`,
@@ -793,17 +929,41 @@ export class EnhancedCompatibilityCheckerService {
             severity: 'critical',
             message: bottleneck,
             affectedParts: ['cpu', 'gpu'],
-            solution: details.performanceMatch.recommendations[index] || 'バランスの取れた構成を検討してください',
+            solution: details.performanceMatch?.recommendations?.[index] || 'バランスの取れた構成を検討してください',
             category: 'パフォーマンスバランス'
           });
         } else {
           warnings.push({
             id: `performance_bottleneck_${index}`,
             message: bottleneck,
-            recommendation: details.performanceMatch.recommendations[index] || 'バランスの取れた構成を検討してください',
+            recommendation: details.performanceMatch?.recommendations?.[index] || 'バランスの取れた構成を検討してください',
             priority: 'medium'
           });
         }
+      });
+    }
+
+    // 冷却関連
+    if (details.cooling && !details.cooling.compatible && !details.cooling.message.includes('待っています')) {
+      details.cooling.issues?.forEach((issue, index) => {
+        issues.push({
+          id: `cooling_issue_${index}`,
+          type: 'cooling_insufficient',
+          severity: 'critical',
+          message: issue,
+          affectedParts: ['cpu', 'cooler', 'case'],
+          solution: '十分な冷却能力を持つクーラーまたはケースを検討してください',
+          category: '冷却互換性'
+        });
+      });
+
+      details.cooling.warnings?.forEach((warning, index) => {
+        warnings.push({
+          id: `cooling_warning_${index}`,
+          message: warning,
+          recommendation: '冷却性能を再確認し、必要に応じてアップグレードを検討してください',
+          priority: 'medium'
+        });
       });
     }
   }
@@ -816,30 +976,32 @@ export class EnhancedCompatibilityCheckerService {
     let score = 100;
 
     // 未選択パーツによる減点
-    if (details.cpuSocket.message.includes('待っています')) score -= 25;
-    if (details.memoryType.message.includes('待っています')) score -= 20;
-    if (details.powerConnectors.message.includes('待っています')) score -= 20;
-    if (details.physicalFit.message.includes('待っています')) score -= 15;
-    if (details.performanceMatch.message.includes('待っています')) score -= 10;
+    if (details.cpuSocket?.message.includes('待っています')) score -= 25;
+    if (details.memoryType?.message.includes('待っています')) score -= 20;
+    if (details.powerConnectors?.message.includes('待っています')) score -= 20;
+    if (details.physicalFit?.message.includes('待っています')) score -= 15;
+    if (details.performanceMatch?.message.includes('待っています')) score -= 10;
+    if (details.cooling?.message.includes('待っています')) score -= 15;
 
     // 互換性問題による減点（重み付き）
-    if (!details.cpuSocket.compatible && !details.cpuSocket.message.includes('待っています')) score -= 30;
-    if (!details.memoryType.compatible && !details.memoryType.message.includes('待っています')) score -= 25;
-    if (!details.powerConnectors.compatible && !details.powerConnectors.message.includes('待っています')) score -= 25;
-    if (!details.physicalFit.compatible && !details.physicalFit.message.includes('待っています')) score -= 15;
+    if (details.cpuSocket && !details.cpuSocket.compatible && !details.cpuSocket.message.includes('待っています')) score -= 30;
+    if (details.memoryType && !details.memoryType.compatible && !details.memoryType.message.includes('待っています')) score -= 25;
+    if (details.powerConnectors && !details.powerConnectors.compatible && !details.powerConnectors.message.includes('待っています')) score -= 25;
+    if (details.physicalFit && !details.physicalFit.compatible && !details.physicalFit.message.includes('待っています')) score -= 15;
+    if (details.cooling && !details.cooling.compatible && !details.cooling.message.includes('待っています')) score -= 20;
     
     // パフォーマンスバランスによる減点（段階的）
-    if (details.performanceMatch.severity === 'severe') score -= 20;
-    else if (details.performanceMatch.severity === 'moderate') score -= 10;
-    else if (details.performanceMatch.severity === 'mild') score -= 5;
+    if (details.performanceMatch?.severity === 'severe') score -= 20;
+    else if (details.performanceMatch?.severity === 'moderate') score -= 10;
+    else if (details.performanceMatch?.severity === 'mild') score -= 5;
 
     // 追加の問題による減点
     score -= criticalIssues * 8;
     score -= warnings * 3;
 
     // ボーナスポイント（良い構成の場合）
-    if (details.cpuSocket.compatible && details.memoryType.compatible && details.powerConnectors.compatible && 
-        details.physicalFit.compatible && details.performanceMatch.balanced) {
+    if (details.cpuSocket?.compatible && details.memoryType?.compatible && details.powerConnectors?.compatible && 
+        details.physicalFit?.compatible && details.performanceMatch?.balanced && details.cooling?.compatible) {
       score += 5; // 完全互換性ボーナス
     }
 

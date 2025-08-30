@@ -45,6 +45,8 @@ export const PCCaseViewer: React.FC<PCCaseViewerProps> = ({
       setWebglError('WebGLがサポートされていません');
     }
   }, []);
+
+
   // WebGLエラー時のフォールバック表示
   if (!webglSupported || webglError) {
     return (
@@ -82,6 +84,9 @@ export const PCCaseViewer: React.FC<PCCaseViewerProps> = ({
     <div 
       className={`relative w-full h-96 bg-gray-900 rounded-lg overflow-hidden ${className}`}
       onContextMenu={(e) => e.preventDefault()} // 右クリックメニューを禁止
+      style={{
+        touchAction: enableControls ? 'none' : 'auto' // ✅ passive event listener対応 (Option B修正)
+      }}
     >
       {/* 3Dキャンバス */}
       <Canvas
@@ -96,12 +101,14 @@ export const PCCaseViewer: React.FC<PCCaseViewerProps> = ({
           antialias: true,
           preserveDrawingBuffer: false,
           failIfMajorPerformanceCaveat: false,
-          powerPreference: "default",
+          powerPreference: "high-performance", // 🚀 高パフォーマンスGPU優先
           alpha: false,
           depth: true,
           stencil: false,
           premultipliedAlpha: false
         }}
+        // 🎯 フレームレート最適化
+        frameloop="demand" // 必要時のみレンダリング
         onCreated={({ gl, scene, camera }) => {
           // WebGLコンテキストロストイベントハンドラ
           gl.domElement.addEventListener('webglcontextlost', (event) => {
@@ -169,7 +176,7 @@ export const PCCaseViewer: React.FC<PCCaseViewerProps> = ({
           />
         </Suspense>
 
-        {/* カメラコントロール */}
+        {/* カメラコントロール - パフォーマンス最適化版 */}
         {enableControls && (
           <OrbitControls
             enablePan={true}
@@ -178,6 +185,32 @@ export const PCCaseViewer: React.FC<PCCaseViewerProps> = ({
             minDistance={3}
             maxDistance={20}
             maxPolarAngle={Math.PI / 2}
+            // 🔧 パフォーマンス最適化設定
+            enableDamping={true}
+            dampingFactor={0.05}
+            screenSpacePanning={false}
+            // 🎯 イベント最適化（フレームレート向上）
+            rotateSpeed={0.5}
+            zoomSpeed={0.8}
+            panSpeed={0.8}
+            // 🛡️ 安定性向上
+            autoRotate={false}
+            autoRotateSpeed={0.5}
+            target={[0, 1, 0]}
+            // ✅ イベント処理最適化 (Option B修正)
+            touches={{
+              ONE: 1, // ROTATE
+              TWO: 2  // DOLLY_PAN  
+            }}
+            mouseButtons={{
+              LEFT: 0,   // ROTATE
+              MIDDLE: 1, // DOLLY
+              RIGHT: 2   // PAN
+            }}
+            // スムーズな操作のためのイベント最適化
+            listenToKeyEvents={false}
+            makeDefault={false}
+            regress={false}
           />
         )}
       </Canvas>
@@ -185,18 +218,18 @@ export const PCCaseViewer: React.FC<PCCaseViewerProps> = ({
       {/* UI オーバーレイ（表示制御対応） */}
       {showUIOverlay && (
         <>
-          <div className="absolute top-4 left-4 bg-black bg-opacity-50 text-white px-3 py-2 rounded text-sm">
+          <div className="absolute top-4 left-4 z-10 bg-gray-900 bg-opacity-90 text-white border border-gray-600 px-3 py-2 rounded text-sm shadow-lg backdrop-blur-sm pointer-events-none">
             <div className="font-medium">3D PC構成ビュー</div>
-            <div className="text-xs opacity-75">
+            <div className="text-xs text-gray-300">
               ドラッグ: 回転 | ホイール: ズーム | 右クリック: パン
             </div>
           </div>
 
-          <div className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-2 rounded text-sm">
-            <div className="text-xs">
+          <div className="absolute bottom-4 right-4 z-10 bg-gray-900 bg-opacity-90 text-white border border-gray-600 px-3 py-2 rounded text-sm shadow-lg backdrop-blur-sm pointer-events-none">
+            <div className="text-xs text-gray-200">
               パーツ数: {Object.values(configuration.parts).filter(Boolean).length}/9
             </div>
-            <div className="text-xs">
+            <div className="text-xs text-gray-200">
               合計: ¥{configuration.totalPrice.toLocaleString()}
             </div>
           </div>

@@ -57,6 +57,10 @@ jobs:
         run: npm ci
 
       - name: 🏗️ Build application
+        env:
+          VITE_PHASE: 2.5
+          VITE_NODE_ENV: production
+          VITE_ENABLE_ADVANCED_FEATURES: false
         run: npm run build
 
       - name: 📊 Upload build artifacts
@@ -110,6 +114,11 @@ jobs:
         run: npm ci
 
       - name: 🏗️ Build for production
+        env:
+          VITE_PHASE: 2.5
+          VITE_NODE_ENV: production
+          VITE_ENABLE_ADVANCED_FEATURES: false
+          VITE_PRODUCTION_READY: true
         run: npm run build
 
       - name: 🚀 Deploy to GitHub Pages

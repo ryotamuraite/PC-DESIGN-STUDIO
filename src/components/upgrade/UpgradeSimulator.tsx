@@ -1,7 +1,7 @@
 // src/components/upgrade/UpgradeSimulator.tsx
 // Phase 3 Week3: アップグレードシミュレーター実装 - 世界初のBefore/After性能予測システム
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { 
   PlayCircle, 
@@ -160,12 +160,45 @@ export const UpgradeSimulator: React.FC<UpgradeSimulatorProps> = ({
     };
   };
   
-  // 自動シミュレーション実行
+  // 初期化完了フラグ - 重複実行防止
+  const initializedRef = useRef(false);
+  const lastPlanIdRef = useRef<string | null>(null);
+  
+  // 初期化をuseEffectで一度だけ実行（依存配列を最小限に）
   useEffect(() => {
-    if (autoRun && plan && currentConfig && !simulatorState.currentSimulation) {
-      simulatorActions.runSimulation(plan, convertToCurrentConfig(currentConfig));
+    const shouldInitialize = (
+      autoRun && 
+      !initializedRef.current && 
+      plan && 
+      currentConfig && 
+      !simulatorState.currentSimulation &&
+      plan.id !== lastPlanIdRef.current
+    );
+    
+    if (!shouldInitialize) {
+      return;
     }
-  }, [plan, currentConfig, autoRun, simulatorState.currentSimulation, simulatorActions]);
+    
+    console.log('🎯 UpgradeSimulator初期化開始:', plan.name);
+    
+    const initializeAsync = async () => {
+      try {
+        initializedRef.current = true;
+        lastPlanIdRef.current = plan.id;
+        
+        await simulatorActions.runSimulation(plan, convertToCurrentConfig(currentConfig));
+        
+        console.log('✅ UpgradeSimulator初期化完了');
+      } catch (error) {
+        console.error('❌ UpgradeSimulator初期化エラー:', error);
+        // エラー時はフラグをリセットして再試行可能にする
+        initializedRef.current = false;
+        lastPlanIdRef.current = null;
+      }
+    };
+    
+    initializeAsync();
+  }, [plan.id, currentConfig.id, autoRun, simulatorState.currentSimulation, currentConfig, plan, simulatorActions]); // ESLint警告修正: 依存関係を追加
 
   // 進行状況の計算
   const progressPercentage = useMemo(() => {

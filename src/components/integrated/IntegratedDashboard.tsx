@@ -184,7 +184,7 @@ export const IntegratedDashboard: React.FC<IntegratedDashboardProps> = ({
         </div>
 
         {/* 3D操作ヒント */}
-        <div className="absolute bottom-4 left-4 bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg text-sm shadow-lg z-10">
+        <div className="absolute bottom-4 left-4 bg-white bg-opacity-95 text-gray-900 border border-gray-300 px-3 py-2 rounded-lg text-sm shadow-lg z-10">
           🖱️ ドラッグ回転 | 🎯 ホイールズーム | 📱 右クリックパン
         </div>
         </div>

@@ -1,7 +1,7 @@
 // src/components/UpgradeSimulator/UpgradeSimulator.tsx
 // 🎯 Phase 3F: アップグレードシミュレーターメインコンポーネント
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -58,11 +58,31 @@ export const UpgradeSimulator: React.FC<UpgradeSimulatorProps> = ({
   // 🔄 初期化・副作用
   // ===========================================
   
-  // 初期化処理
+  // 初期化済みフラグ
+  const initializedRef = useRef(false);
+  const currentPlanIdRef = useRef<string | null>(null);
+  
+  // 初期化処理 - 無限ループ防止版
   useEffect(() => {
+    // 重複実行防止チェック
+    const shouldInitialize = (
+      plan && 
+      currentConfig && 
+      !initializedRef.current && 
+      currentPlanIdRef.current !== plan.id
+    );
+    
+    if (!shouldInitialize) {
+      return;
+    }
+    
     const initializeSimulator = async () => {
       try {
         console.log('🎯 UpgradeSimulator初期化開始:', plan.name);
+        
+        // 初期化フラグ設定
+        initializedRef.current = true;
+        currentPlanIdRef.current = plan.id;
         
         // シミュレーター設定更新
         simulatorActions.updateSimulationConfig({
@@ -85,21 +105,35 @@ export const UpgradeSimulator: React.FC<UpgradeSimulatorProps> = ({
         
       } catch (error) {
         console.error('❌ UpgradeSimulator初期化エラー:', error);
+        // エラー時はフラグをリセット
+        initializedRef.current = false;
+        currentPlanIdRef.current = null;
       }
     };
     
-    if (plan && currentConfig) {
-      initializeSimulator();
-    }
-  }, [plan, currentConfig, targetUsage, simulatorActions]);
+    initializeSimulator();
+  }, [plan?.id, currentConfig?.id, targetUsage, simulatorActions, currentConfig, plan]); // ESLint警告修正: currentConfig, planを依存配列に追加
   
-  // シミュレーション完了監視
+  // シミュレーション完了監視 - 無限ループ防止版
+  const lastCompletedSimulationIdRef = useRef<string | null>(null);
+  
   useEffect(() => {
-    if (simulatorState.currentSimulation && !simulatorState.isSimulating) {
+    const shouldNotifyComplete = (
+      simulatorState.currentSimulation && 
+      !simulatorState.isSimulating &&
+      lastCompletedSimulationIdRef.current !== simulatorState.currentSimulation.id
+    );
+    
+    if (shouldNotifyComplete && simulatorState.currentSimulation) {
       console.log('🎯 シミュレーション完了:', simulatorState.currentSimulation);
+      
+      // 完了済みIDを記録
+      lastCompletedSimulationIdRef.current = simulatorState.currentSimulation.id;
+      
+      // 一度だけコールバック実行
       onSimulationComplete(simulatorState.currentSimulation);
     }
-  }, [simulatorState.currentSimulation, simulatorState.isSimulating, onSimulationComplete]);
+  }, [simulatorState.currentSimulation?.id, simulatorState.isSimulating, onSimulationComplete, simulatorState.currentSimulation]); // ESLint警告修正: simulatorState.currentSimulationを依存配列に追加
   
   // ===========================================
   // 🎮 イベントハンドラー

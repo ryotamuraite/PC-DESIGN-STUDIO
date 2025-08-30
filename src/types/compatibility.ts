@@ -37,15 +37,17 @@ export type CompatibilityIssueType =
   | 'power_insufficient' 
   | 'size_conflict' 
   | 'connector_missing'
-  | 'missing_part';
+  | 'missing_part'
+  | 'cooling_insufficient';
 
 // 詳細互換性チェック結果（パフォーマンス予測統合版）
 export interface CompatibilityDetails {
-  cpuSocket: SocketCompatibility;
-  memoryType: MemoryCompatibility;
-  powerConnectors: PowerConnectorCompatibility;
-  physicalFit: PhysicalCompatibility;
-  performanceMatch: PerformanceCompatibility;
+  cpuSocket?: SocketCompatibility;
+  memoryType?: MemoryCompatibility;
+  powerConnectors?: PowerConnectorCompatibility;
+  physicalFit?: PhysicalCompatibility;
+  performanceMatch?: PerformanceCompatibility;
+  cooling?: CoolingCompatibility;
   performancePrediction?: {
     overallScore: number;
     bottleneckAnalysis: {
@@ -171,6 +173,20 @@ export interface PerformanceCompatibility {
     dlssAvailable: boolean;
     performanceClass: 'entry' | 'mainstream' | 'high-end' | 'flagship';
   };
+  message: string;
+}
+
+// 冷却互換性（新規追加）
+export interface CoolingCompatibility {
+  compatible: boolean;
+  cpuTdp?: number;
+  coolerTdp?: number;
+  socketCompatible?: boolean;
+  clearanceCompatible?: boolean;
+  thermalMargin?: number;
+  issues: string[];
+  warnings: string[];
+  recommendations?: string[];
   message: string;
 }
 

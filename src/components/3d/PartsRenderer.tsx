@@ -7,12 +7,28 @@ import type { PCConfiguration, Part } from '@/types';
 import SmartPartLabel from './SmartPartLabel';
 import CompatibilityVisualization from './CompatibilityVisualization';
 
+// 🎯 統一パーツサイズ正規化（v67.0対応）
+const PART_SCALES = {
+  case: { width: 200, height: 450, depth: 400 },      // ATXケース標準 (mm)
+  motherboard: { width: 305, height: 244, depth: 5 }, // ATX標準 (mm)
+  gpu: { width: 300, height: 120, depth: 40 },        // ハイエンドGPU標準 (mm)
+  cpu_cooler: { width: 120, height: 160, depth: 120 }, // タワークーラー標準 (mm)
+  psu: { width: 150, height: 86, depth: 140 },         // ATX電源標準 (mm)
+  cpu: { width: 37, height: 3, depth: 37 },           // LGA1700標準 (mm)
+  memory: { width: 133, height: 30, depth: 8 },       // DDR4/5標準 (mm)
+  storage_nvme: { width: 80, height: 22, depth: 3 },  // M.2 2280標準 (mm)
+  storage_ssd: { width: 100, height: 70, depth: 7 }   // 2.5" SSD標準 (mm)
+};
+
+// 🎯 スケール変換係数（mm → Three.js単位）
+const SCALE_FACTOR = 0.001; // 1mm = 0.001 Three.js単位
+
 // 🎯 ケース内座標系統一（現実的配置）
 const CASE_COORDINATES = {
-  // ケースサイズ（PCCase3Dと統一）
-  width: 2.0,    // X軸（左右）
-  height: 1.8,   // Y軸（上下）
-  depth: 1.5,    // Z軸（前後）
+  // ケースサイズ（正規化サイズ適用）
+  width: PART_SCALES.case.width * SCALE_FACTOR,    // X軸（左右）
+  height: PART_SCALES.case.height * SCALE_FACTOR,  // Y軸（上下）
+  depth: PART_SCALES.case.depth * SCALE_FACTOR,    // Z軸（前後）
   
   // 主要マウント位置（既存PCCase3D定義を活用）
   motherboardMount: [-0.3, -0.18, -0.3] as [number, number, number],
@@ -215,71 +231,107 @@ function getPartInfo(part: Part, category: string): string {
   }
 }
 
-// 🎯 CPU 3Dコンポーネント（現実的サイズ・配置）
+// 🎯 CPU 3Dコンポーネント（正規化サイズ適用）
 const CPUComponent: React.FC<{
   position: [number, number, number];
   cpuData: Part;
 }> = ({ position, cpuData }) => {
-  // CPUソケットサイズの動的計算
+  // CPU正規化サイズ適用
   const socket = cpuData.specifications?.socket as string || 'LGA1700';
   const isLGA = socket.includes('LGA');
-  const size = isLGA ? 0.037 : 0.040; // LGA vs AM4/AM5 実寸差
+  
+  // 正規化サイズ（PART_SCALES適用）
+  const cpuWidth = PART_SCALES.cpu.width * SCALE_FACTOR;
+  const cpuHeight = PART_SCALES.cpu.height * SCALE_FACTOR;
+  const cpuDepth = PART_SCALES.cpu.depth * SCALE_FACTOR;
+  
+  // AM4/AM5は若干大きめに調整
+  const socketMultiplier = isLGA ? 1.0 : 1.08;
+  const adjustedWidth = cpuWidth * socketMultiplier;
+  const adjustedDepth = cpuDepth * socketMultiplier;
+  
   return (
     <group position={position}>
-      {/* マザーボードCPUソケット（現実的サイズ） */}
-      <Box args={[size * 1.2, 0.005, size * 1.2]}>
+      {/* マザーボードCPUソケット（正規化サイズ） */}
+      <Box args={[adjustedWidth * 1.2, 0.005, adjustedDepth * 1.2]}>
         <meshStandardMaterial color="#1a202c" metalness={0.8} roughness={0.2} />
       </Box>
       
-      {/* CPU本体（実寸反映） */}
-      <Box args={[size, 0.003, size]} position={[0, 0.004, 0]}>
+      {/* CPU本体（正規化サイズ） */}
+      <Box args={[adjustedWidth, cpuHeight, adjustedDepth]} position={[0, cpuHeight * 0.5, 0]}>
         <meshStandardMaterial color="#2d3748" metalness={0.9} roughness={0.1} />
       </Box>
       
       {/* CPUマーキング */}
-      <Box args={[size * 0.8, 0.001, size * 0.1]} position={[0, 0.0045, size * 0.3]}>
+      <Box args={[adjustedWidth * 0.8, 0.001, adjustedDepth * 0.1]} position={[0, cpuHeight + 0.001, adjustedDepth * 0.3]}>
         <meshBasicMaterial color="#ffffff" />
       </Box>
     </group>
   );
 };
 
-// 🎯 GPU 3Dコンポーネント（現実的サイズ・配置）
+// 🎯 GPU 3Dコンポーネント（正規化サイズ適用）
 const GPUComponent: React.FC<{
   position: [number, number, number];
   gpuData: Part;
 }> = ({ position, gpuData }) => {
-  // GPU仕様からサイズ計算
-  const gpuLength = (gpuData.specifications?.length as number || 250) / 1000;
+  // GPU正規化サイズ適用
   const gpuMemory = gpuData.specifications?.memory as number || 8;
+  const gpuLength = gpuData.specifications?.length as number || 300;
   const isHighEnd = gpuMemory >= 16; // ハイエンドGPU判定
+  
+  // 正規化サイズ（PART_SCALES適用）
+  const baseWidth = PART_SCALES.gpu.width * SCALE_FACTOR;
+  const baseHeight = PART_SCALES.gpu.height * SCALE_FACTOR;
+  const baseDepth = PART_SCALES.gpu.depth * SCALE_FACTOR;
+  
+  // GPU長に応じたスケール調整
+  const lengthScale = Math.max(0.7, Math.min(1.3, gpuLength / 300)); // 210mm～390mm範囲
+  const adjustedWidth = baseWidth * lengthScale;
+  const adjustedHeight = isHighEnd ? baseHeight * 1.2 : baseHeight;
+  
   return (
     <group position={position}>
-      {/* GPU基板（実寸反映） */}
-      <Box args={[gpuLength * 0.8, 0.016, 0.1]}>
+      {/* GPU基板（正規化サイズ） */}
+      <Box args={[adjustedWidth, 0.016, baseDepth]}>
         <meshStandardMaterial color="#22543d" metalness={0.3} roughness={0.7} />
       </Box>
       
       {/* GPUクーラー（性能に応じたサイズ） */}
-      <Box args={[gpuLength * 0.7, isHighEnd ? 0.055 : 0.045, 0.08]} position={[0, isHighEnd ? 0.035 : 0.03, 0]}>
+      <Box 
+        args={[adjustedWidth * 0.9, adjustedHeight, baseDepth * 0.8]} 
+        position={[0, adjustedHeight * 0.5 + 0.008, 0]}
+      >
         <meshStandardMaterial color={isHighEnd ? "#2d3748" : "#4a5568"} metalness={0.5} roughness={0.5} />
       </Box>
       
       {/* ファン（GPU長に応じた配置）*/}
-      {gpuLength > 0.2 && (
+      {lengthScale > 0.8 && (
         <>
-          <Cylinder args={[0.03, 0.03, 0.01]} position={[-gpuLength * 0.2, 0.05, 0]} rotation={[Math.PI/2, 0, 0]}>
+          <Cylinder 
+            args={[0.035, 0.035, 0.015]} 
+            position={[-adjustedWidth * 0.25, adjustedHeight * 0.6 + 0.008, 0]} 
+            rotation={[Math.PI/2, 0, 0]}
+          >
             <meshStandardMaterial color="#2d3748" metalness={0.6} roughness={0.4} />
           </Cylinder>
-          <Cylinder args={[0.03, 0.03, 0.01]} position={[gpuLength * 0.2, 0.05, 0]} rotation={[Math.PI/2, 0, 0]}>
+          <Cylinder 
+            args={[0.035, 0.035, 0.015]} 
+            position={[adjustedWidth * 0.25, adjustedHeight * 0.6 + 0.008, 0]} 
+            rotation={[Math.PI/2, 0, 0]}
+          >
             <meshStandardMaterial color="#2d3748" metalness={0.6} roughness={0.4} />
           </Cylinder>
         </>
       )}
       
-      {/* GPU長が長い場合の追加ファン */}
-      {gpuLength > 0.3 && (
-        <Cylinder args={[0.03, 0.03, 0.01]} position={[0, 0.05, 0]} rotation={[Math.PI/2, 0, 0]}>
+      {/* ハイエンドGPUの追加ファン */}
+      {isHighEnd && lengthScale > 1.0 && (
+        <Cylinder 
+          args={[0.035, 0.035, 0.015]} 
+          position={[0, adjustedHeight * 0.6 + 0.008, 0]} 
+          rotation={[Math.PI/2, 0, 0]}
+        >
           <meshStandardMaterial color="#2d3748" metalness={0.6} roughness={0.4} />
         </Cylinder>
       )}
@@ -287,20 +339,25 @@ const GPUComponent: React.FC<{
   );
 };
 
-// メモリ 3Dコンポーネント
+// 🎯 メモリ 3Dコンポーネント（正規化サイズ適用）
 const MemoryComponent: React.FC<{
   memoryData: Part;
   position: [number, number, number];
 }> = ({ memoryData, position }) => {
   const modules = memoryData.specifications?.modules as number || 2;
   
+  // 正規化サイズ（PART_SCALES適用）
+  const memWidth = PART_SCALES.memory.width * SCALE_FACTOR;
+  const memHeight = PART_SCALES.memory.height * SCALE_FACTOR;
+  const memDepth = PART_SCALES.memory.depth * SCALE_FACTOR;
+  
   return (
     <group position={position}>
       {Array.from({ length: modules }).map((_, i) => (
         <Box 
           key={i}
-          args={[0.03, 0.15, 0.008]} 
-          position={[i * 0.04, 0.075, 0]}
+          args={[memWidth, memHeight, memDepth]} 
+          position={[i * memWidth * 1.1, memHeight * 0.5, 0]}
         >
           <meshStandardMaterial color="#1a365d" metalness={0.4} roughness={0.6} />
         </Box>
@@ -309,7 +366,7 @@ const MemoryComponent: React.FC<{
   );
 };
 
-// ストレージ 3Dコンポーネント  
+// 🎯 ストレージ 3Dコンポーネント（正規化サイズ適用）  
 const StorageComponent: React.FC<{
   storageData: Part;
   position: [number, number, number];
@@ -318,35 +375,54 @@ const StorageComponent: React.FC<{
   const formFactorSpec = storageData.specifications?.formFactor as string || '';
   const isNVMe = interfaceSpec.includes('NVMe') || formFactorSpec.includes('M.2');
   
-  return (
-    <group position={position}>
-      {isNVMe ? (
-        // M.2 NVMe SSD
-        <Box args={[0.22, 0.005, 0.022]}>
+  // 正規化サイズ（PART_SCALES適用）
+  if (isNVMe) {
+    const nvmeWidth = PART_SCALES.storage_nvme.width * SCALE_FACTOR;
+    const nvmeHeight = PART_SCALES.storage_nvme.height * SCALE_FACTOR;
+    const nvmeDepth = PART_SCALES.storage_nvme.depth * SCALE_FACTOR;
+    
+    return (
+      <group position={position}>
+        {/* M.2 NVMe SSD */}
+        <Box args={[nvmeWidth, nvmeDepth, nvmeHeight]} position={[0, nvmeDepth * 0.5, 0]}>
           <meshStandardMaterial color="#2d3748" metalness={0.8} roughness={0.2} />
         </Box>
-      ) : (
-        // 2.5" SSD/HDD
-        <Box args={[0.25, 0.07, 0.18]}>
+      </group>
+    );
+  } else {
+    const ssdWidth = PART_SCALES.storage_ssd.width * SCALE_FACTOR;
+    const ssdHeight = PART_SCALES.storage_ssd.height * SCALE_FACTOR;
+    const ssdDepth = PART_SCALES.storage_ssd.depth * SCALE_FACTOR;
+    
+    return (
+      <group position={position}>
+        {/* 2.5" SSD/HDD */}
+        <Box args={[ssdWidth, ssdDepth, ssdHeight]} position={[0, ssdDepth * 0.5, 0]}>
           <meshStandardMaterial color="#4a5568" metalness={0.4} roughness={0.6} />
         </Box>
-      )}
-    </group>
-  );
+      </group>
+    );
+  }
 };
 
-// 🎯 PSU 3Dコンポーネント（現実的サイズ・配置）
+// 🎯 PSU 3Dコンポーネント（正規化サイズ適用）
 const PSUComponent: React.FC<{
   position: [number, number, number];
   psuData: Part;
 }> = ({ position, psuData }) => {
-  // PSU仕様からサイズ計算
+  // PSU仕様情報取得
   const isModular = (psuData.specifications?.modular as string || '').includes('モジュラー');
   const efficiency = psuData.specifications?.efficiency as string || '80 PLUS';
+  
+  // 正規化サイズ（PART_SCALES適用）
+  const psuWidth = PART_SCALES.psu.width * SCALE_FACTOR;
+  const psuHeight = PART_SCALES.psu.height * SCALE_FACTOR;
+  const psuDepth = PART_SCALES.psu.depth * SCALE_FACTOR;
+  
   return (
     <group position={position}>
-      {/* PSU本体（ATX標準サイズ：150×86×140mm） */}
-      <Box args={[0.15, 0.086, 0.14]}>
+      {/* PSU本体（正規化ATXサイズ） */}
+      <Box args={[psuWidth, psuHeight, psuDepth]} position={[0, psuHeight * 0.5, 0]}>
         <meshStandardMaterial 
           color={efficiency.includes('Gold') ? "#1a202c" : "#2d3748"} 
           metalness={0.5} 
@@ -354,19 +430,29 @@ const PSUComponent: React.FC<{
         />
       </Box>
       
-      {/* PSUファン（120mm標準） */}
-      <Cylinder args={[0.06, 0.06, 0.01]} position={[0, 0.044, 0]} rotation={[0, 0, 0]}>
+      {/* PSUファン（120mm標準、正規化サイズ） */}
+      <Cylinder 
+        args={[0.06, 0.06, 0.015]} 
+        position={[0, psuHeight + 0.008, 0]} 
+        rotation={[0, 0, 0]}
+      >
         <meshStandardMaterial color="#2d3748" metalness={0.6} roughness={0.4} />
       </Cylinder>
       
       {/* 電力ラベル */}
-      <Box args={[0.08, 0.03, 0.001]} position={[0.06, 0, 0.071]}>
+      <Box 
+        args={[psuWidth * 0.5, psuHeight * 0.35, 0.002]} 
+        position={[psuWidth * 0.3, psuHeight * 0.5, psuDepth * 0.51]}
+      >
         <meshBasicMaterial color="#ffffff" />
       </Box>
       
       {/* モジュラー表示 */}
       {isModular && (
-        <Box args={[0.12, 0.02, 0.001]} position={[0, -0.03, 0.071]}>
+        <Box 
+          args={[psuWidth * 0.8, psuHeight * 0.25, 0.002]} 
+          position={[0, psuHeight * 0.2, psuDepth * 0.51]}
+        >
           <meshBasicMaterial color="#22c55e" />
         </Box>
       )}
@@ -374,26 +460,37 @@ const PSUComponent: React.FC<{
   );
 };
 
-// 🎯 CPUクーラー 3Dコンポーネント（現実的サイズ・配置）
+// 🎯 CPUクーラー 3Dコンポーネント（正規化サイズ適用）
 const CoolerComponent: React.FC<{
   position: [number, number, number];
   coolerData: Part;
 }> = ({ position, coolerData }) => {
-  // クーラー仕様からサイズ計算
-  const coolerHeight = (coolerData.specifications?.height as number || 150) / 1000;
+  // クーラー仕様情報取得
+  const coolerHeight = coolerData.specifications?.height as number || 160;
   const coolerType = coolerData.specifications?.type as string || 'Air';
   const isAIO = coolerType.includes('AIO') || coolerType.includes('水冷');
-  const fanSize = (coolerData.specifications?.fanSize as number || 120) / 1000;
+  const fanSize = coolerData.specifications?.fanSize as number || 120;
+  
+  // 正規化サイズ（PART_SCALES適用）
+  const baseCoolerWidth = PART_SCALES.cpu_cooler.width * SCALE_FACTOR;
+  const baseCoolerHeight = PART_SCALES.cpu_cooler.height * SCALE_FACTOR;
+  const baseCoolerDepth = PART_SCALES.cpu_cooler.depth * SCALE_FACTOR;
+  
+  // 実際の高さに応じたスケール調整
+  const heightScale = Math.max(0.6, Math.min(1.4, coolerHeight / 160)); // 96mm～224mm範囲
+  const adjustedHeight = baseCoolerHeight * heightScale;
+  const fanRadius = (fanSize * 0.5) * SCALE_FACTOR;
+  
   if (isAIO) {
     // 簡易水冷の場合
     return (
       <group position={position}>
-        {/* ウォーターブロック */}
-        <Cylinder args={[0.025, 0.025, 0.02]}>
+        {/* ウォーターブロック（正規化サイズ） */}
+        <Cylinder args={[0.025, 0.025, 0.02]} position={[0, 0.01, 0]}>
           <meshStandardMaterial color="#1a202c" metalness={0.9} roughness={0.1} />
         </Cylinder>
         {/* チューブ表現（簡略） */}
-        <Box args={[0.008, 0.1, 0.008]} position={[0.03, 0.05, 0]}>
+        <Box args={[0.008, adjustedHeight * 0.6, 0.008]} position={[0.03, adjustedHeight * 0.3, 0]}>
           <meshStandardMaterial color="#2d3748" />
         </Box>
       </group>
@@ -403,22 +500,28 @@ const CoolerComponent: React.FC<{
   // 空冷の場合
   return (
     <group position={position}>
-      {/* ヒートシンク（実寸反映） */}
-      <Box args={[0.1, coolerHeight * 0.8, 0.1]} position={[0, coolerHeight * 0.4, 0]}>
+      {/* ヒートシンク（正規化サイズ） */}
+      <Box 
+        args={[baseCoolerWidth * 0.8, adjustedHeight * 0.7, baseCoolerDepth * 0.8]} 
+        position={[0, adjustedHeight * 0.35, 0]}
+      >
         <meshStandardMaterial color="#718096" metalness={0.8} roughness={0.3} />
       </Box>
       
-      {/* ファン（サイズ反映） */}
+      {/* ファン（正規化サイズ） */}
       <Cylinder 
-        args={[fanSize * 0.4, fanSize * 0.4, 0.025]} 
-        position={[fanSize * 0.5, coolerHeight * 0.4, 0]} 
+        args={[fanRadius * 0.8, fanRadius * 0.8, 0.025]} 
+        position={[baseCoolerWidth * 0.5, adjustedHeight * 0.4, 0]} 
         rotation={[0, 0, Math.PI/2]}
       >
         <meshStandardMaterial color="#2d3748" metalness={0.6} roughness={0.4} />
       </Cylinder>
       
-      {/* マウンティング機構 */}
-      <Box args={[0.02, 0.02, 0.02]} position={[0, -0.01, 0]}>
+      {/* マウンティング機構（正規化サイズ） */}
+      <Box 
+        args={[baseCoolerWidth * 0.2, 0.02, baseCoolerDepth * 0.2]} 
+        position={[0, -0.01, 0]}
+      >
         <meshStandardMaterial color="#4a5568" metalness={0.7} roughness={0.3} />
       </Box>
     </group>

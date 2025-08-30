@@ -337,6 +337,7 @@ const CompatibilityDetailsSection: React.FC<{
       powerConnectors?: { message?: string };
       physicalFit?: { message?: string };
       performanceMatch?: { message?: string };
+      cooling?: { message?: string };
     };
   };
   checkSpecificCompatibility: (category: string) => boolean;
@@ -367,6 +368,12 @@ const CompatibilityDetailsSection: React.FC<{
       category: 'physical',
       details: details?.physicalFit,
       description: 'ケース内での物理的な配置可能性'
+    },
+    {
+      label: '冷却互換性',
+      category: 'cooling',
+      details: details?.cooling,
+      description: 'CPUとクーラーの冷却性能互換性'
     },
     {
       label: 'パフォーマンスバランス',

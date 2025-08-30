@@ -432,18 +432,18 @@ export class CompatibilityCheckerService {
     let score = 100;
 
     // 🔧 未選択パーツによる減点（重要な改善）
-    if (details.cpuSocket.message.includes('待っています')) score -= 30;
-    if (details.memoryType.message.includes('待っています')) score -= 25;
-    if (details.powerConnectors.message.includes('待っています')) score -= 20;
-    if (details.physicalFit.message.includes('待っています')) score -= 15;
-    if (details.performanceMatch.message.includes('待っています')) score -= 5;
+    if (details.cpuSocket?.message.includes('待っています')) score -= 30;
+    if (details.memoryType?.message.includes('待っています')) score -= 25;
+    if (details.powerConnectors?.message.includes('待っています')) score -= 20;
+    if (details.physicalFit?.message.includes('待っています')) score -= 15;
+    if (details.performanceMatch?.message.includes('待っています')) score -= 5;
 
     // 重要な互換性チェック結果による減点
-    if (!details.cpuSocket.compatible && !details.cpuSocket.message.includes('待っています')) score -= 30;
-    if (!details.memoryType.compatible && !details.memoryType.message.includes('待っています')) score -= 25;
-    if (!details.powerConnectors.compatible && !details.powerConnectors.message.includes('待っています')) score -= 20;
-    if (!details.physicalFit.compatible && !details.physicalFit.message.includes('待っています')) score -= 15;
-    if (!details.performanceMatch.balanced && !details.performanceMatch.message.includes('待っています')) score -= 5;
+    if (details.cpuSocket && !details.cpuSocket.compatible && !details.cpuSocket.message.includes('待っています')) score -= 30;
+    if (details.memoryType && !details.memoryType.compatible && !details.memoryType.message.includes('待っています')) score -= 25;
+    if (details.powerConnectors && !details.powerConnectors.compatible && !details.powerConnectors.message.includes('待っています')) score -= 20;
+    if (details.physicalFit && !details.physicalFit.compatible && !details.physicalFit.message.includes('待っています')) score -= 15;
+    if (details.performanceMatch && !details.performanceMatch.balanced && !details.performanceMatch.message.includes('待っています')) score -= 5;
 
     // 追加の問題による減点
     score -= criticalIssues * 10;

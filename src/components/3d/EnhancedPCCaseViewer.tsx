@@ -144,10 +144,15 @@ export const EnhancedPCCaseViewer: React.FC<EnhancedPCCaseViewerProps> = ({
         gl={{ 
           antialias: true,
           preserveDrawingBuffer: false,
+          failIfMajorPerformanceCaveat: false,
+          powerPreference: "high-performance", // 🚀 Enhanced版高パフォーマンス
           alpha: false,
           depth: true,
-          stencil: false
+          stencil: false,
+          premultipliedAlpha: false
         }}
+        // 🎯 Enhanced版フレームレート最適化
+        frameloop="always" // 高級機能用は常時レンダリング
       >
         {/* 高品質ライティング */}
         <ambientLight intensity={0.4} />
@@ -228,7 +233,7 @@ export const EnhancedPCCaseViewer: React.FC<EnhancedPCCaseViewerProps> = ({
           )}
         </Suspense>
 
-        {/* カメラコントロール */}
+        {/* カメラコントロール - Enhanced版最適化 */}
         {enableControls && (
           <OrbitControls
             enablePan={true}
@@ -237,8 +242,18 @@ export const EnhancedPCCaseViewer: React.FC<EnhancedPCCaseViewerProps> = ({
             minDistance={3}
             maxDistance={20}
             maxPolarAngle={Math.PI / 2}
+            // 🔧 パフォーマンス最適化設定
             enableDamping={true}
             dampingFactor={0.05}
+            screenSpacePanning={false}
+            // 🎯 イベント最適化（Enhanced版）
+            rotateSpeed={0.6}
+            zoomSpeed={0.9}
+            panSpeed={0.9}
+            // 🛡️ 高級機能対応
+            autoRotate={false}
+            autoRotateSpeed={2.0}
+            target={[0, 1, 0]}
           />
         )}
       </Canvas>

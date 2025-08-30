@@ -15,6 +15,82 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  
+  /* グローバルサイズ変数 - Desktop */
+  --text-xs: 0.75rem;     /* 12px */
+  --text-sm: 0.875rem;    /* 14px */
+  --text-base: 1rem;      /* 16px */
+  --text-lg: 1.125rem;    /* 18px */
+  --text-xl: 1.25rem;     /* 20px */
+  --text-2xl: 1.5rem;     /* 24px */
+  
+  /* グローバルスペーシング変数 - Desktop */
+  --space-1: 0.25rem;     /* 4px */
+  --space-2: 0.5rem;      /* 8px */
+  --space-3: 0.75rem;     /* 12px */
+  --space-4: 1rem;        /* 16px */
+  --space-5: 1.25rem;     /* 20px */
+  --space-6: 1.5rem;      /* 24px */
+  --space-8: 2rem;        /* 32px */
+  
+  /* ボタンサイズ - Desktop */
+  --btn-padding-x: 1rem;  /* 16px */
+  --btn-padding-y: 0.5rem; /* 8px */
+  --btn-text: 0.875rem;   /* 14px */
+}
+
+/* Tablet (768px-1279px) - 約85%サイズ */
+@media (max-width: 1279px) and (min-width: 768px) {
+  :root {
+    /* テキストサイズ - Tablet */
+    --text-xs: 0.625rem;    /* 10px */
+    --text-sm: 0.75rem;     /* 12px */
+    --text-base: 0.875rem;  /* 14px */
+    --text-lg: 1rem;        /* 16px */
+    --text-xl: 1.125rem;    /* 18px */
+    --text-2xl: 1.25rem;    /* 20px */
+    
+    /* スペーシング - Tablet */
+    --space-1: 0.125rem;    /* 2px */
+    --space-2: 0.25rem;     /* 4px */
+    --space-3: 0.5rem;      /* 8px */
+    --space-4: 0.75rem;     /* 12px */
+    --space-5: 1rem;        /* 16px */
+    --space-6: 1.25rem;     /* 20px */
+    --space-8: 1.5rem;      /* 24px */
+    
+    /* ボタンサイズ - Tablet */
+    --btn-padding-x: 0.75rem; /* 12px */
+    --btn-padding-y: 0.375rem; /* 6px */
+    --btn-text: 0.75rem;    /* 12px */
+  }
+}
+
+/* Smartphone (767px以下) - 約70-75%サイズ + レイアウト調整 */
+@media (max-width: 767px) {
+  :root {
+    /* テキストサイズ - Smartphone */
+    --text-xs: 0.625rem;    /* 10px */
+    --text-sm: 0.6875rem;   /* 11px */
+    --text-base: 0.75rem;   /* 12px */
+    --text-lg: 0.875rem;    /* 14px */
+    --text-xl: 1rem;        /* 16px */
+    --text-2xl: 1.125rem;   /* 18px */
+    
+    /* スペーシング - Smartphone (最小化) */
+    --space-1: 0.125rem;    /* 2px */
+    --space-2: 0.1875rem;   /* 3px */
+    --space-3: 0.375rem;    /* 6px */
+    --space-4: 0.5rem;      /* 8px */
+    --space-5: 0.75rem;     /* 12px */
+    --space-6: 1rem;        /* 16px */
+    --space-8: 1.25rem;     /* 20px */
+    
+    /* ボタンサイズ - Smartphone */
+    --btn-padding-x: 0.5rem;  /* 8px */
+    --btn-padding-y: 0.25rem; /* 4px */
+    --btn-text: 0.625rem;     /* 10px */
+  }
 }
 
 a {

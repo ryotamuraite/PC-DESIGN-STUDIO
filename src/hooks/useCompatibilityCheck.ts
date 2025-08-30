@@ -59,15 +59,17 @@ export const useCompatibilityCheck = (
     
     switch (category) {
       case 'socket':
-        return result.details.cpuSocket.compatible;
+        return result.details.cpuSocket?.compatible ?? false;
       case 'memory':
-        return result.details.memoryType.compatible;
+        return result.details.memoryType?.compatible ?? false;
       case 'power':
-        return result.details.powerConnectors.compatible;
+        return result.details.powerConnectors?.compatible ?? false;
       case 'physical':
-        return result.details.physicalFit.compatible;
+        return result.details.physicalFit?.compatible ?? false;
       case 'performance':
-        return result.details.performanceMatch.balanced;
+        return result.details.performanceMatch?.balanced ?? false;
+      case 'cooling':
+        return result.details.cooling?.compatible ?? false;
       default:
         return result.isCompatible;
     }

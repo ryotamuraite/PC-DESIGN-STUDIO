@@ -75,21 +75,24 @@ export const ConfigSummary: React.FC<ConfigSummaryProps> = ({
   };
 
   return (
-    <div className={`bg-gradient-to-br from-cyan-800 to-cyan-900 rounded-xl shadow-lg ${className}`}>
+    <div className={`${className}`}>
       {/* 🔥 強制キャッシュクリアマーカー - v2.0 */}
-      <div className="p-4 space-y-4">
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          🔧 構成サマリー
-          <div className="text-xs text-cyan-200 ml-auto">
-            {selectedPartsCount}/{totalPartsCount}
-          </div>
-        </h2>
+      <div className="px-3 space-y-4">
+        {/* タイトルヘッダー */}
+        <div className="pb-2">
+          <h2 className="text-base font-semibold text-white flex items-center gap-2">
+            🔧 構成サマリー
+            <div className="text-xs text-brand-accent-200 ml-auto">
+              {selectedPartsCount}/{totalPartsCount}
+            </div>
+          </h2>
+        </div>
 
         {/* カスタムHR */}
         <div className="custom-hr"></div>
 
         {/* 互換性チェック - summary-section適用 */}
-        <div className="summary-section">
+        <div className="summary-section mx-3">
           <div className="flex items-center gap-2 mb-3">
             <CheckCircle className={`w-4 h-4 ${
               compatibilityResult?.isCompatible ? 'text-green-300' : 
@@ -97,7 +100,7 @@ export const ConfigSummary: React.FC<ConfigSummaryProps> = ({
             }`} />
             <span className="font-semibold text-white">🔄 互換性チェック</span>
             {isCompatibilityLoading && (
-              <div className="text-xs text-cyan-200">チェック中...</div>
+              <div className="text-xs text-brand-accent-200">チェック中...</div>
             )}
           </div>
           
@@ -107,7 +110,7 @@ export const ConfigSummary: React.FC<ConfigSummaryProps> = ({
             {compatibilityResult ? (
               <>
                 <div className="flex justify-between text-sm">
-                  <span className="text-cyan-200">互換性スコア:</span>
+                  <span className="text-brand-accent-200">互換性スコア:</span>
                   <span className={`font-semibold ${
                     compatibilityResult.score >= 90 ? 'text-green-300' :
                     compatibilityResult.score >= 70 ? 'text-yellow-300' : 'text-red-300'
@@ -165,6 +168,12 @@ export const ConfigSummary: React.FC<ConfigSummaryProps> = ({
                     message={compatibilityResult.details?.performanceMatch?.message || ''}
                     configuration={configuration}
                   />
+                  <CompatibilityItem
+                    label="冷却互換"
+                    status={checkSpecificCompatibility('cooling')}
+                    message={compatibilityResult.details?.cooling?.message || ''}
+                    configuration={configuration}
+                  />
                 </div>
               </>
             ) : (
@@ -179,7 +188,7 @@ export const ConfigSummary: React.FC<ConfigSummaryProps> = ({
         <div className="custom-hr"></div>
 
         {/* 価格情報 - summary-section適用 */}
-        <div className="summary-section">
+        <div className="summary-section mx-3">
           <div className="flex items-center gap-2 mb-3">
             <ShoppingBag className="w-4 h-4 text-white" />
             <span className="font-semibold text-white">💰 価格情報</span>
@@ -189,15 +198,15 @@ export const ConfigSummary: React.FC<ConfigSummaryProps> = ({
           
           <div className="space-y-2 mt-3">
             <div className="flex justify-between">
-              <span className="text-sm text-cyan-200">合計価格:</span>
+            <span className="text-sm text-brand-accent-200">合計価格:</span>
               <span className="font-semibold text-lg text-white">¥{configuration.totalPrice.toLocaleString()}</span>
             </div>
             
             {configuration.budget && (
               <>
                 <div className="flex justify-between">
-                  <span className="text-sm text-cyan-200">予算:</span>
-                  <span className="text-sm text-cyan-100">¥{configuration.budget.toLocaleString()}</span>
+                  <span className="text-sm text-brand-accent-200">予算:</span>
+                  <span className="text-sm text-brand-accent-100">¥{configuration.budget.toLocaleString()}</span>
                 </div>
                 
                 {configuration.totalPrice > configuration.budget && (
@@ -215,7 +224,7 @@ export const ConfigSummary: React.FC<ConfigSummaryProps> = ({
         <div className="custom-hr"></div>
 
         {/* 構成進捗 - summary-section適用 */}
-        <div className="summary-section">
+        <div className="summary-section mx-3">
           <div className="flex items-center gap-2 mb-3">
             <CheckCircle className={`w-4 h-4 ${selectedPartsCount === totalPartsCount ? 'text-green-300' : 'text-blue-300'}`} />
             <span className="font-semibold text-white">⚙️ 構成進捗</span>
@@ -225,7 +234,7 @@ export const ConfigSummary: React.FC<ConfigSummaryProps> = ({
           
           <div className="space-y-3 mt-3">
             <div className="flex justify-between text-sm">
-              <span className="text-cyan-200">選択済みパーツ</span>
+              <span className="text-brand-accent-200">選択済みパーツ</span>
               <span className="font-medium text-white">{selectedPartsCount}/{totalPartsCount}</span>
             </div>
             
@@ -248,7 +257,7 @@ export const ConfigSummary: React.FC<ConfigSummaryProps> = ({
                     <div className={`${part ? 'text-green-300' : 'text-gray-400'}`}>
                       {categoryIcons[category]}
                     </div>
-                    <span className="text-cyan-200">
+                    <span className="text-brand-accent-200">
                       {categoryNames[category]}:
                     </span>
                   </div>
@@ -258,7 +267,7 @@ export const ConfigSummary: React.FC<ConfigSummaryProps> = ({
                 </div>
               ))}
               {Object.keys(configuration.parts).length > 6 && (
-                <div className="text-xs text-cyan-300 text-center mt-2">
+                <div className="text-xs text-brand-accent-300 text-center mt-2">
                   +{Object.keys(configuration.parts).length - 6}項目...
                 </div>
               )}
@@ -270,7 +279,7 @@ export const ConfigSummary: React.FC<ConfigSummaryProps> = ({
         <div className="custom-hr"></div>
 
         {/* 電力情報 - summary-section適用 */}
-        <div className="summary-section">
+        <div className="summary-section mx-3">
           <div className="flex items-center gap-2 mb-3">
             <Zap className="w-4 h-4 text-yellow-300" />
             <span className="font-semibold text-white">⚡ 電力詳細</span>
@@ -335,7 +344,7 @@ export const ConfigSummary: React.FC<ConfigSummaryProps> = ({
         <div className="custom-hr"></div>
 
         {/* 更新通知 - summary-section適用 */}
-        <div className="summary-section">
+        <div className="summary-section mx-3">
           <div className="flex items-center gap-2 mb-3">
             <span className="font-semibold text-white">📢 更新通知</span>
           </div>
@@ -387,6 +396,11 @@ const CompatibilityItem: React.FC<{
       case '性能バランス':
         if (!config.parts.cpu) missingParts.push('CPU');
         if (!config.parts.gpu) missingParts.push('GPU');
+        break;
+      case '冷却互換':
+        if (!config.parts.cooler) missingParts.push('CPUクーラー');
+        if (!config.parts.cpu) missingParts.push('CPU');
+        if (!config.parts.case) missingParts.push('PCケース');
         break;
     }
     
